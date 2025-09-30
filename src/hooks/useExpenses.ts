@@ -192,6 +192,9 @@ export function useExpenses() {
 
   // Toggle theme
   const toggleTheme = useCallback(() => {
+    // Temporarily disable transitions for better performance
+    document.documentElement.classList.add('theme-transitioning');
+    
     setState(prevState => {
       const newTheme: 'light' | 'dark' = prevState.theme === 'light' ? 'dark' : 'light';
       const updated = { ...prevState, theme: newTheme };
@@ -199,7 +202,61 @@ export function useExpenses() {
       saveState(updated);
       return updated;
     });
+
+    // Re-enable transitions after a short delay
+    setTimeout(() => {
+      document.documentElement.classList.remove('theme-transitioning');
+    }, 50);
   }, [saveState]);
+
+  // Import expenses and categories
+  const importExpenses = useCallback(async (importedData: { expenses: Expense[], categories: string[] }) => {
+    const newExpenses = importedData.expenses || [];
+    const newCategories = importedData.categories || [...defaultCategories];
+    
+    // Update local state immediately
+    setState(prevState => {
+      const updated = {
+        ...prevState,
+        expenses: newExpenses,
+        categories: newCategories
+      };
+      
+      saveState(updated);
+      return updated;
+    });
+
+    // If authenticated and online, sync with API
+    if (isAuthenticated && isOnline) {
+      try {
+        // Use bulk create for better performance
+        const response = await ApiService.bulkCreateExpenses(newExpenses);
+        if (!response.success) {
+          console.warn('Failed to bulk sync expenses to API:', response.error);
+          // Fallback to individual creation
+          for (const expense of newExpenses) {
+            try {
+              await ApiService.createExpense(expense);
+            } catch (error) {
+              console.warn(`Failed to sync expense ${expense.id} to API:`, error);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to sync imported data to API:', error);
+      }
+    }
+  }, [saveState, isAuthenticated, isOnline]);
+
+  // Apply theme to document immediately and on theme change
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', state.theme === 'light');
+  }, [state.theme]);
+
+  // Apply initial theme immediately on mount
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', state.theme === 'light');
+  }, []); // Empty dependency array - runs only on mount
 
   // Initialize
   useEffect(() => {
@@ -213,21 +270,18 @@ export function useExpenses() {
     initialize();
   }, [loadState, syncWithApi]);
 
-  // Apply theme to document
-  useEffect(() => {
-    document.documentElement.classList.toggle('light', state.theme === 'light');
-  }, [state.theme]);
-
   return {
     ...state,
     isLoading,
     isOnline,
+    isAuthenticated,
     addExpense,
     deleteExpense,
     updateExpense,
     addCategory,
     updateFilters,
     toggleTheme,
-    syncWithApi
+    syncWithApi,
+    importExpenses
   };
 }

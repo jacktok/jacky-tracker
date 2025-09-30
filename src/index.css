@@ -18,6 +18,7 @@
     --accent: #3b82f6;
     --accent-hover: #2563eb;
     --accent-light: #60a5fa;
+    --accent-bg: rgba(59, 130, 246, 0.1);
     --success: #10b981;
     --success-light: #34d399;
     --warning: #f59e0b;
@@ -44,6 +45,7 @@
     --accent: #3b82f6;
     --accent-hover: #2563eb;
     --accent-light: #60a5fa;
+    --accent-bg: rgba(59, 130, 246, 0.1);
     --success: #059669;
     --success-light: #10b981;
     --warning: #d97706;
@@ -55,6 +57,20 @@
     --ring: rgba(59, 130, 246, 0.2);
   }
 
+  /* Ensure light theme is properly applied */
+  html.light {
+    color-scheme: light;
+  }
+
+  html:not(.light) {
+    color-scheme: dark;
+  }
+
+  /* Disable transitions during theme changes for better performance */
+  .theme-transitioning * {
+    transition: none !important;
+  }
+
   * {
     @apply border-border;
   }
@@ -64,17 +80,19 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 cursor-pointer min-h-[44px] sm:min-h-[36px] relative overflow-hidden touch-manipulation;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-150 cursor-pointer min-h-[44px] sm:min-h-[36px] relative overflow-hidden touch-manipulation;
     @apply bg-gradient-to-r from-accent to-accent-hover text-white shadow-custom;
   }
 
   .btn:hover {
-    @apply -translate-y-0.5 shadow-custom-lg brightness-110;
+    @apply -translate-y-0.5 shadow-custom-lg brightness-110 transition-transform duration-150;
   }
 
   .btn:active {
@@ -82,7 +100,7 @@
   }
 
   .btn-secondary {
-    @apply bg-panel text-text border-2 border-border shadow-none;
+    @apply bg-panel text-text border-2 border-border shadow-none transition-colors duration-150;
   }
 
   .btn-secondary:hover {
@@ -98,7 +116,7 @@
   }
 
   .btn-icon {
-    @apply bg-panel border border-border text-text p-3 text-base;
+    @apply bg-panel border border-border text-text p-3 text-base transition-all duration-150;
   }
 
   .btn-icon:hover {
@@ -106,12 +124,12 @@
   }
 
   .chip {
-    @apply inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold rounded-full cursor-pointer transition-all duration-200 min-h-[36px] sm:min-h-[28px] touch-manipulation;
+    @apply inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold rounded-full cursor-pointer transition-colors duration-150 min-h-[36px] sm:min-h-[28px] touch-manipulation;
     @apply bg-panel-2 border-2 border-border text-text;
   }
 
   .chip:hover:not(.chip-category) {
-    @apply border-accent bg-accent text-white -translate-y-0.5 shadow-custom;
+    @apply border-accent bg-accent text-white -translate-y-0.5 shadow-custom transition-all duration-150;
   }
 
   .chip-category {
@@ -127,11 +145,11 @@
   }
 
   .input {
-    @apply w-full px-3 py-3 sm:py-2 text-sm font-medium bg-panel-2 border border-border text-text rounded-lg outline-none transition-all duration-200 min-h-[44px] sm:min-h-[36px];
+    @apply w-full px-3 py-3 sm:py-2 text-sm font-medium bg-panel-2 border border-border text-text rounded-lg outline-none transition-colors duration-150 min-h-[44px] sm:min-h-[36px];
   }
 
   .input:focus {
-    @apply border-accent shadow-[0_0_0_4px_var(--ring)] bg-panel -translate-y-0.5;
+    @apply border-accent shadow-[0_0_0_4px_var(--ring)] bg-panel -translate-y-0.5 transition-all duration-150;
   }
 
   .input:hover {
@@ -143,11 +161,11 @@
   }
 
   .select {
-    @apply w-full px-3 py-3 sm:py-2 text-sm font-medium bg-panel-2 border border-border text-text rounded-lg outline-none transition-all duration-200 min-h-[44px] sm:min-h-[36px];
+    @apply w-full px-3 py-3 sm:py-2 text-sm font-medium bg-panel-2 border border-border text-text rounded-lg outline-none transition-colors duration-150 min-h-[44px] sm:min-h-[36px];
   }
 
   .select:focus {
-    @apply border-accent shadow-[0_0_0_4px_var(--ring)] bg-panel -translate-y-0.5;
+    @apply border-accent shadow-[0_0_0_4px_var(--ring)] bg-panel -translate-y-0.5 transition-all duration-150;
   }
 
   .select:hover {
@@ -159,20 +177,20 @@
   }
 
   .badge-category {
-    @apply border-transparent bg-accent/10 text-accent font-bold;
+    @apply border-transparent bg-accent-bg text-accent font-bold;
   }
 
   .card {
-    @apply bg-panel border border-border rounded-custom-lg p-6 shadow-custom transition-all duration-300 relative overflow-hidden;
+    @apply bg-panel border border-border rounded-custom-lg p-6 shadow-custom transition-colors duration-150 relative overflow-hidden;
   }
 
   .card:hover {
-    @apply -translate-y-1 shadow-custom-xl border-accent;
+    @apply -translate-y-1 shadow-custom-xl border-accent transition-all duration-150;
   }
 
   .card::before {
     content: '';
-    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent-hover scale-x-0 transition-transform duration-300;
+    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent-hover scale-x-0 transition-transform duration-150;
   }
 
   .card:hover::before {
@@ -180,11 +198,11 @@
   }
 
   .panel {
-    @apply bg-panel border border-border rounded-custom-lg p-4 sm:p-6 shadow-custom transition-all duration-300 relative;
+    @apply bg-panel border border-border rounded-custom-lg p-4 sm:p-6 shadow-custom transition-colors duration-150 relative;
   }
 
   .panel:hover {
-    @apply -translate-y-0.5 shadow-custom-lg border-border-light;
+    @apply -translate-y-0.5 shadow-custom-lg border-border-light transition-all duration-150;
   }
 
   .panel-title {
@@ -197,7 +215,7 @@
   }
 
   .summary-item {
-    @apply bg-panel border border-border rounded-custom-lg p-3 shadow-custom transition-all duration-300 relative overflow-hidden;
+    @apply bg-panel border border-border rounded-custom-lg p-3 shadow-custom transition-colors duration-150 relative overflow-hidden;
   }
 
   .summary-item::before {
@@ -206,7 +224,7 @@
   }
 
   .summary-item:hover {
-    @apply -translate-y-1 shadow-custom-xl border-accent;
+    @apply -translate-y-1 shadow-custom-xl border-accent transition-all duration-150;
   }
 
   .summary-label {
@@ -252,15 +270,15 @@
 
   /* Layout Components */
   .header {
-    @apply bg-panel border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-sm;
+    @apply bg-panel border-b border-border px-3 sm:px-6 py-2 sm:py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-sm;
   }
 
   .header__title {
-    @apply text-lg sm:text-2xl font-bold text-text m-0 tracking-tight;
+    @apply text-base sm:text-2xl font-bold text-text m-0 tracking-tight;
   }
 
   .header__actions {
-    @apply flex items-center gap-2 sm:gap-3;
+    @apply flex items-center gap-1 sm:gap-3;
   }
 
   .import-label {
@@ -368,7 +386,11 @@
   }
 
   .breakdown-item {
-    @apply bg-panel-2 border border-border rounded-lg p-4 text-center transition-all duration-200 hover:border-accent hover:-translate-y-1 hover:shadow-custom;
+    @apply bg-panel-2 border border-border rounded-lg p-4 text-center transition-colors duration-150;
+  }
+
+  .breakdown-item:hover {
+    @apply border-accent -translate-y-1 shadow-custom transition-all duration-150;
   }
 
   .breakdown-item__category {
@@ -451,7 +473,11 @@
   }
 
   .breakdown__item {
-    @apply bg-panel-2 border border-border rounded-lg p-4 text-center transition-all duration-200 hover:border-accent hover:-translate-y-1 hover:shadow-custom;
+    @apply bg-panel-2 border border-border rounded-lg p-4 text-center transition-colors duration-150;
+  }
+
+  .breakdown__item:hover {
+    @apply border-accent -translate-y-1 shadow-custom transition-all duration-150;
   }
 
   .breakdown__row {
