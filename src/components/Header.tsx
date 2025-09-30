@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Upload, Download, Menu, X, Settings, BarChart3, Tag, PieChart } from 'lucide-react';
+import { Moon, Sun, Upload, Download, Menu, X, Settings, BarChart3, Tag, PieChart, MessageCircle } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AuthButton } from './AuthButton';
 
@@ -8,8 +8,8 @@ interface HeaderProps {
   onToggleTheme: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
-  activeTab?: 'dashboard' | 'categories' | 'summary';
-  onTabChange?: (tab: 'dashboard' | 'categories' | 'summary') => void;
+  activeTab?: 'dashboard' | 'categories' | 'summary' | 'chat';
+  onTabChange?: (tab: 'dashboard' | 'categories' | 'summary' | 'chat') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleTabClick = (tab: 'dashboard' | 'categories' | 'summary') => {
+  const handleTabClick = (tab: 'dashboard' | 'categories' | 'summary' | 'chat') => {
     onTabChange?.(tab);
     setIsMobileMenuOpen(false);
   };
@@ -128,6 +128,17 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <PieChart size={16} className="inline mr-1.5" />
                 Summary
+              </button>
+              <button
+                onClick={() => handleTabClick('chat')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'chat'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <MessageCircle size={16} className="inline mr-1.5" />
+                Chat
               </button>
             </div>
           )}
@@ -230,6 +241,17 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <PieChart size={16} />
                 Summary & Analytics
+              </button>
+              <button
+                onClick={() => handleTabClick('chat')}
+                className={`w-full px-3 py-2 text-left text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${
+                  activeTab === 'chat'
+                    ? 'bg-accent text-white'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <MessageCircle size={16} />
+                Chat Mode
               </button>
             </div>
           )}

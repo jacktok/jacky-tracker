@@ -16,6 +16,9 @@ A modern, responsive money tracking application built with React, TypeScript, an
 - **Inline Editing**: Edit expenses directly in the table
 - **Toast Notifications**: User-friendly feedback system
 - **Secure Backend**: JWT-based authentication with PostgreSQL
+- **🤖 AI-Powered Chat Mode**: Natural language expense entry with LLM classification
+- **🧠 Smart Categorization**: Automatic category suggestions using multiple LLM providers
+- **🆓 Free LLM Integration**: Support for Groq, OpenAI, and Hugging Face APIs
 
 ## 🛠️ Tech Stack
 

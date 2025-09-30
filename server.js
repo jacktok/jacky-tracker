@@ -11,11 +11,33 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { Pool } from 'pg';
 import connectPgSimple from 'connect-pg-simple';
+import LLMService from './llm-service.js';
 
 dotenv.config();
 const pgSession = connectPgSimple(session);
 
 const app = express();
+const llmService = new LLMService();
+
+// Helper function to add default categories for new users
+async function addDefaultCategoriesForUser(userId) {
+  const defaultCategories = [
+    'Food & Dining', 'Transportation', 'Shopping', 'Entertainment', 
+    'Healthcare', 'Utilities', 'Groceries', 'Education', 'Travel', 
+    'Insurance', 'Housing', 'Personal Care', 'Subscriptions', 
+    'Savings & Investment', 'Gifts & Donations', 'Pet Care', 
+    'Office Supplies', 'Miscellaneous'
+  ];
+  
+  for (const category of defaultCategories) {
+    await pool.query(
+      'INSERT INTO categories (user_id, name) VALUES ($1, $2)',
+      [userId, category]
+    );
+  }
+  
+  console.log(`Added ${defaultCategories.length} default categories for new user ${userId}`);
+}
 
 // CORS configuration
 app.use(cors({
@@ -86,6 +108,15 @@ async function ensureSchema() {
       category text not null,
       note text not null default ''
     );
+    
+    create table if not exists user_sessions (
+      sid varchar not null collate "default",
+      sess json not null,
+      expire timestamp(6) not null
+    );
+    
+    create unique index if not exists user_sessions_pkey on user_sessions(sid);
+    create index if not exists user_sessions_expire_idx on user_sessions(expire);
   `);
 }
 
@@ -118,17 +149,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         user = result;
         
         // Add default categories for new user
-        const defaultCategories = [
-          'Food', 'Transport', 'Housing', 'Utilities', 'Health',
-          'Entertainment', 'Shopping', 'Education', 'Travel', 'Loan', 'Other'
-        ];
-        
-        for (const category of defaultCategories) {
-          await pool.query(
-            'INSERT INTO categories (user_id, name) VALUES ($1, $2)',
-            [user.rows[0].id, category]
-          );
-        }
+        await addDefaultCategoriesForUser(user.rows[0].id);
       }
 
       return done(null, user.rows[0]);
@@ -169,17 +190,7 @@ if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
         user = result;
         
         // Add default categories for new user
-        const defaultCategories = [
-          'Food', 'Transport', 'Housing', 'Utilities', 'Health',
-          'Entertainment', 'Shopping', 'Education', 'Travel', 'Loan', 'Other'
-        ];
-        
-        for (const category of defaultCategories) {
-          await pool.query(
-            'INSERT INTO categories (user_id, name) VALUES ($1, $2)',
-            [user.rows[0].id, category]
-          );
-        }
+        await addDefaultCategoriesForUser(user.rows[0].id);
       }
 
       return done(null, user.rows[0]);
@@ -518,6 +529,32 @@ app.delete('/api/categories/:name', authenticateToken, async (req, res) => {
   } catch (e) {
     await pool.query('ROLLBACK');
     res.status(500).json({ error: e.message });
+  }
+});
+
+// LLM-based category classification endpoint
+app.post('/api/classify-expense', authenticateToken, async (req, res) => {
+  const { message, amount, description } = req.body || {};
+  
+  if (!message || !amount) {
+    return res.status(400).json({ error: 'Message and amount are required' });
+  }
+  
+  try {
+    // Get user's existing categories for context
+    const categoriesResult = await pool.query(
+      'SELECT name FROM categories WHERE user_id = $1 ORDER BY name',
+      [req.user.userId]
+    );
+    const existingCategories = categoriesResult.rows.map(row => row.name);
+    
+    // Use LLM service for classification
+    const result = await llmService.classifyExpense(message, amount, description, existingCategories);
+    
+    res.json(result);
+  } catch (e) {
+    console.error('Classification error:', e);
+    res.status(500).json({ error: 'Failed to classify expense' });
   }
 });
 

@@ -3,12 +3,13 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Dashboard } from './components/Dashboard';
 import { CategoryManagement } from './components/CategoryManagement';
 import { Summary } from './components/Summary';
+import { ChatMode } from './components/ChatMode';
 import { Header } from './components/Header';
 import { useExpenses } from './hooks/useExpenses';
 import { useToast } from './hooks/useToast';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'categories' | 'summary'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'categories' | 'summary' | 'chat'>('dashboard');
   const {
     expenses,
     categories,
@@ -168,6 +169,7 @@ function App() {
               expenses={expenses}
             />
           )}
+          {activeTab === 'chat' && <ChatMode />}
         </div>
       </div>
     </ProtectedRoute>

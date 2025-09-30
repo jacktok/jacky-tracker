@@ -131,6 +131,24 @@ export class ApiService {
       body: JSON.stringify({ migrateTo }),
     });
   }
+
+  // LLM classification endpoint
+  static async classifyExpense(message: string, amount: number, description?: string): Promise<ApiResponse<{
+    category: string | null;
+    confidence: number;
+    description: string;
+    isExisting: boolean;
+  }>> {
+    return this.request<{
+      category: string | null;
+      confidence: number;
+      description: string;
+      isExisting: boolean;
+    }>('/api/classify-expense', {
+      method: 'POST',
+      body: JSON.stringify({ message, amount, description }),
+    });
+  }
 }
 
 export const api = ApiService;

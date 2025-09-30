@@ -21,6 +21,11 @@ export interface AppState {
   theme: 'light' | 'dark';
 }
 
+export interface Category {
+  name: string;
+  description?: string;
+}
+
 export interface ToastMessage {
   id: string;
   message: string;
