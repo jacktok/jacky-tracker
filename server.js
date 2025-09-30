@@ -70,6 +70,14 @@ async function ensureSchema() {
       unique(provider, provider_id)
     );
     
+    create table if not exists categories (
+      id uuid primary key default gen_random_uuid(),
+      user_id uuid not null references users(id) on delete cascade,
+      name text not null,
+      created_at timestamp with time zone default now(),
+      unique(user_id, name)
+    );
+    
     create table if not exists expenses (
       id uuid primary key default gen_random_uuid(),
       user_id uuid not null references users(id) on delete cascade,
@@ -108,6 +116,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           ]
         );
         user = result;
+        
+        // Add default categories for new user
+        const defaultCategories = [
+          'Food', 'Transport', 'Housing', 'Utilities', 'Health',
+          'Entertainment', 'Shopping', 'Education', 'Travel', 'Loan', 'Other'
+        ];
+        
+        for (const category of defaultCategories) {
+          await pool.query(
+            'INSERT INTO categories (user_id, name) VALUES ($1, $2)',
+            [user.rows[0].id, category]
+          );
+        }
       }
 
       return done(null, user.rows[0]);
@@ -146,6 +167,19 @@ if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
           ]
         );
         user = result;
+        
+        // Add default categories for new user
+        const defaultCategories = [
+          'Food', 'Transport', 'Housing', 'Utilities', 'Health',
+          'Entertainment', 'Shopping', 'Education', 'Travel', 'Loan', 'Other'
+        ];
+        
+        for (const category of defaultCategories) {
+          await pool.query(
+            'INSERT INTO categories (user_id, name) VALUES ($1, $2)',
+            [user.rows[0].id, category]
+          );
+        }
       }
 
       return done(null, user.rows[0]);
@@ -356,6 +390,133 @@ app.put('/api/expenses/:id', authenticateToken, async (req, res) => {
     
     res.json(result.rows[0]);
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Category management endpoints
+app.get('/api/categories', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT name FROM categories WHERE user_id = $1 ORDER BY name',
+      [req.user.userId]
+    );
+    res.json(result.rows.map(row => row.name));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/categories', authenticateToken, async (req, res) => {
+  const { name } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'Category name is required' });
+  
+  try {
+    const result = await pool.query(
+      'INSERT INTO categories (user_id, name) VALUES ($1, $2) RETURNING name',
+      [req.user.userId, name]
+    );
+    res.json(result.rows[0].name);
+  } catch (e) {
+    if (e.code === '23505') { // Unique constraint violation
+      res.status(409).json({ error: 'Category already exists' });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
+  }
+});
+
+app.put('/api/categories/:oldName', authenticateToken, async (req, res) => {
+  const { newName } = req.body || {};
+  if (!newName) return res.status(400).json({ error: 'New category name is required' });
+  
+  try {
+    // Start a transaction
+    await pool.query('BEGIN');
+    
+    // Update the category name
+    const categoryResult = await pool.query(
+      'UPDATE categories SET name = $1 WHERE user_id = $2 AND name = $3 RETURNING name',
+      [newName, req.user.userId, req.params.oldName]
+    );
+    
+    if (categoryResult.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    
+    // Update all expenses with the old category name
+    await pool.query(
+      'UPDATE expenses SET category = $1 WHERE user_id = $2 AND category = $3',
+      [newName, req.user.userId, req.params.oldName]
+    );
+    
+    await pool.query('COMMIT');
+    res.json({ message: 'Category renamed successfully' });
+  } catch (e) {
+    await pool.query('ROLLBACK');
+    if (e.code === '23505') { // Unique constraint violation
+      res.status(409).json({ error: 'Category already exists' });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
+  }
+});
+
+app.delete('/api/categories/:name', authenticateToken, async (req, res) => {
+  const { migrateTo } = req.body || {};
+  
+  try {
+    // Start a transaction
+    await pool.query('BEGIN');
+    
+    // Check if category exists
+    const categoryResult = await pool.query(
+      'SELECT name FROM categories WHERE user_id = $1 AND name = $2',
+      [req.user.userId, req.params.name]
+    );
+    
+    if (categoryResult.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    
+    // If migration target is specified, update all expenses
+    if (migrateTo) {
+      // Verify migration target exists
+      const targetResult = await pool.query(
+        'SELECT name FROM categories WHERE user_id = $1 AND name = $2',
+        [req.user.userId, migrateTo]
+      );
+      
+      if (targetResult.rows.length === 0) {
+        await pool.query('ROLLBACK');
+        return res.status(400).json({ error: 'Migration target category not found' });
+      }
+      
+      // Update all expenses with the old category to the new category
+      await pool.query(
+        'UPDATE expenses SET category = $1 WHERE user_id = $2 AND category = $3',
+        [migrateTo, req.user.userId, req.params.name]
+      );
+    } else {
+      // Delete all expenses with this category
+      await pool.query(
+        'DELETE FROM expenses WHERE user_id = $1 AND category = $2',
+        [req.user.userId, req.params.name]
+      );
+    }
+    
+    // Delete the category
+    await pool.query(
+      'DELETE FROM categories WHERE user_id = $1 AND name = $2',
+      [req.user.userId, req.params.name]
+    );
+    
+    await pool.query('COMMIT');
+    res.json({ message: 'Category deleted successfully' });
+  } catch (e) {
+    await pool.query('ROLLBACK');
     res.status(500).json({ error: e.message });
   }
 });

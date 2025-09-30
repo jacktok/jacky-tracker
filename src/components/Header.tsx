@@ -1,5 +1,5 @@
-import React from 'react';
-import { Moon, Sun, Upload, Download } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Moon, Sun, Upload, Download, Menu, X, Settings, BarChart3, Tag } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AuthButton } from './AuthButton';
 
@@ -8,15 +8,22 @@ interface HeaderProps {
   onToggleTheme: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
+  activeTab?: 'dashboard' | 'categories';
+  onTabChange?: (tab: 'dashboard' | 'categories') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   theme,
   onToggleTheme,
   onExport,
-  onImport
+  onImport,
+  activeTab,
+  onTabChange
 }) => {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -29,62 +36,218 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
+    setIsDropdownOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
-  return (
-    <header className="header">
-      <h1 className="header__title">💰 Money Tracker</h1>
-      <div className="header__actions">
-        <AuthButton />
-        
-        <Button
-          variant="icon"
-          onClick={onToggleTheme}
-          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-          className="hidden sm:flex"
-        >
-          {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-        </Button>
-        
-        <Button variant="secondary" onClick={onExport} className="hidden sm:flex">
-          <Download size={16} />
-          <span className="hidden md:inline">Export JSON</span>
-        </Button>
-        
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-        <Button variant="secondary" onClick={handleImportClick} className="hidden sm:flex">
-          <Upload size={16} />
-          <span className="hidden md:inline">Import JSON</span>
-        </Button>
+  const handleExportClick = () => {
+    onExport();
+    setIsDropdownOpen(false);
+    setIsMobileMenuOpen(false);
+  };
 
-        {/* Mobile menu button - simplified actions */}
-        <div className="flex sm:hidden gap-1">
+  const handleThemeToggle = () => {
+    onToggleTheme();
+    setIsMobileMenuOpen(false);
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleTabClick = (tab: 'dashboard' | 'categories') => {
+    onTabChange?.(tab);
+    setIsMobileMenuOpen(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  return (
+    <>
+      <header className="bg-card border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-sm">
+        {/* Logo and Title */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent/80 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">💰</span>
+            </div>
+            <h1 className="text-lg sm:text-xl font-bold text-text tracking-tight">
+              Money Tracker
+            </h1>
+          </div>
+        </div>
+
+        {/* Desktop Navigation */}
+        <div className="hidden lg:flex items-center gap-1">
+          {onTabChange && (
+            <div className="flex bg-bg rounded-lg p-1 mr-4">
+              <button
+                onClick={() => handleTabClick('dashboard')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'dashboard'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <BarChart3 size={16} className="inline mr-1.5" />
+                Dashboard
+              </button>
+              <button
+                onClick={() => handleTabClick('categories')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'categories'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <Tag size={16} className="inline mr-1.5" />
+                Categories
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Actions */}
+        <div className="hidden sm:flex items-center gap-2">
+          {/* Dropdown Menu */}
+          <div className="relative" ref={dropdownRef}>
+            <Button
+              variant="secondary"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2"
+            >
+              <Settings size={16} />
+              <span className="hidden md:inline">Tools</span>
+            </Button>
+            
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-50">
+                <div className="py-1">
+                  <button
+                    onClick={handleExportClick}
+                    className="w-full px-4 py-2 text-left text-sm text-text hover:bg-bg flex items-center gap-2"
+                  >
+                    <Download size={16} />
+                    Export Data
+                  </button>
+                  <button
+                    onClick={handleImportClick}
+                    className="w-full px-4 py-2 text-left text-sm text-text hover:bg-bg flex items-center gap-2"
+                  >
+                    <Upload size={16} />
+                    Import Data
+                  </button>
+                  <div className="border-t border-border my-1"></div>
+                  <button
+                    onClick={handleThemeToggle}
+                    className="w-full px-4 py-2 text-left text-sm text-text hover:bg-bg flex items-center gap-2"
+                  >
+                    {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                    {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <AuthButton />
+        </div>
+
+        {/* Mobile Menu Button */}
+        <div className="flex sm:hidden items-center gap-2">
+          <AuthButton />
           <Button
             variant="icon"
-            onClick={onToggleTheme}
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-            size="sm"
-            className="px-2"
+            onClick={toggleMobileMenu}
+            className="p-2"
           >
-            {theme === 'light' ? <Moon size={12} /> : <Sun size={12} />}
-          </Button>
-          
-          <Button variant="secondary" onClick={onExport} size="sm" className="px-2">
-            <Download size={12} />
-          </Button>
-          
-          <Button variant="secondary" onClick={handleImportClick} size="sm" className="px-2">
-            <Upload size={12} />
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </Button>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="sm:hidden bg-card border-b border-border px-4 py-3 space-y-3">
+          {/* Mobile Navigation */}
+          {onTabChange && (
+            <div className="space-y-2">
+              <button
+                onClick={() => handleTabClick('dashboard')}
+                className={`w-full px-3 py-2 text-left text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${
+                  activeTab === 'dashboard'
+                    ? 'bg-accent text-white'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <BarChart3 size={16} />
+                Dashboard
+              </button>
+              <button
+                onClick={() => handleTabClick('categories')}
+                className={`w-full px-3 py-2 text-left text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${
+                  activeTab === 'categories'
+                    ? 'bg-accent text-white'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <Tag size={16} />
+                Manage Categories
+              </button>
+            </div>
+          )}
+
+          {/* Mobile Actions */}
+          <div className="border-t border-border pt-3 space-y-2">
+            <button
+              onClick={handleExportClick}
+              className="w-full px-3 py-2 text-left text-sm text-text hover:bg-bg rounded-md flex items-center gap-2"
+            >
+              <Download size={16} />
+              Export Data
+            </button>
+            <button
+              onClick={handleImportClick}
+              className="w-full px-3 py-2 text-left text-sm text-text hover:bg-bg rounded-md flex items-center gap-2"
+            >
+              <Upload size={16} />
+              Import Data
+            </button>
+            <button
+              onClick={handleThemeToggle}
+              className="w-full px-3 py-2 text-left text-sm text-text hover:bg-bg rounded-md flex items-center gap-2"
+            >
+              {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              {theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+    </>
   );
 };
 

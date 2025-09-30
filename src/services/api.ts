@@ -105,6 +105,32 @@ export class ApiService {
   static async delete(endpoint: string): Promise<ApiResponse<any>> {
     return this.request(endpoint, { method: 'DELETE' });
   }
+
+  // Category management endpoints
+  static async getCategories(): Promise<ApiResponse<string[]>> {
+    return this.request<string[]>('/api/categories');
+  }
+
+  static async createCategory(name: string): Promise<ApiResponse<string>> {
+    return this.request<string>('/api/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  static async renameCategory(oldName: string, newName: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>(`/api/categories/${encodeURIComponent(oldName)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ newName }),
+    });
+  }
+
+  static async deleteCategory(name: string, migrateTo?: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>(`/api/categories/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ migrateTo }),
+    });
+  }
 }
 
 export const api = ApiService;

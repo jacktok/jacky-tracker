@@ -269,17 +269,6 @@
   }
 
   /* Layout Components */
-  .header {
-    @apply bg-panel border-b border-border px-3 sm:px-6 py-2 sm:py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-sm;
-  }
-
-  .header__title {
-    @apply text-base sm:text-2xl font-bold text-text m-0 tracking-tight;
-  }
-
-  .header__actions {
-    @apply flex items-center gap-1 sm:gap-3;
-  }
 
   .import-label {
     @apply cursor-pointer;

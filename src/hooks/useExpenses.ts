@@ -71,11 +71,23 @@ export function useExpenses() {
       setIsOnline(isHealthy);
       
       if (isHealthy) {
-        const response = await ApiService.getExpenses();
-        if (response.success && response.data) {
+        // Load both expenses and categories from API
+        const [expensesResponse, categoriesResponse] = await Promise.all([
+          ApiService.getExpenses(),
+          ApiService.getCategories()
+        ]);
+        
+        if (expensesResponse.success && expensesResponse.data) {
           setState(prevState => ({
             ...prevState,
-            expenses: response.data as Expense[]
+            expenses: expensesResponse.data as Expense[]
+          }));
+        }
+        
+        if (categoriesResponse.success && categoriesResponse.data) {
+          setState(prevState => ({
+            ...prevState,
+            categories: categoriesResponse.data as string[]
           }));
         }
       }
@@ -161,7 +173,8 @@ export function useExpenses() {
   }, [isAuthenticated, isOnline]);
 
   // Add category
-  const addCategory = useCallback((category: string) => {
+  const addCategory = useCallback(async (category: string) => {
+    // Add locally first for immediate UI update
     setState(prevState => {
       if (prevState.categories.includes(category)) {
         return prevState;
@@ -175,7 +188,98 @@ export function useExpenses() {
       saveState(updated);
       return updated;
     });
-  }, [saveState]);
+
+    // Try to sync with API if authenticated and online
+    if (isAuthenticated && isOnline) {
+      try {
+        const response = await ApiService.createCategory(category);
+        if (!response.success) {
+          console.warn('Failed to sync category to API:', response.error);
+          // Revert local change if API fails
+          setState(prevState => ({
+            ...prevState,
+            categories: prevState.categories.filter(cat => cat !== category)
+          }));
+        }
+      } catch (error) {
+        console.warn('Failed to sync category to API:', error);
+        // Revert local change if API fails
+        setState(prevState => ({
+          ...prevState,
+          categories: prevState.categories.filter(cat => cat !== category)
+        }));
+      }
+    }
+  }, [isAuthenticated, isOnline, saveState]);
+
+  // Delete category with optional migration
+  const deleteCategory = useCallback(async (category: string, migrateTo?: string) => {
+    // Update locally first for immediate UI update
+    setState(prevState => {
+      const updated = {
+        ...prevState,
+        categories: prevState.categories.filter(cat => cat !== category)
+      };
+
+      // If migration target is specified, update all expenses with the old category
+      if (migrateTo) {
+        updated.expenses = prevState.expenses.map(exp => 
+          exp.category === category ? { ...exp, category: migrateTo } : exp
+        );
+      } else {
+        // If no migration target, remove all expenses with this category
+        updated.expenses = prevState.expenses.filter(exp => exp.category !== category);
+      }
+
+      saveState(updated);
+      return updated;
+    });
+
+    // Try to sync with API if authenticated and online
+    if (isAuthenticated && isOnline) {
+      try {
+        const response = await ApiService.deleteCategory(category, migrateTo);
+        if (!response.success) {
+          console.warn('Failed to sync category deletion to API:', response.error);
+          // Note: We don't revert here as the API handles the transaction
+        }
+      } catch (error) {
+        console.warn('Failed to sync category deletion to API:', error);
+      }
+    }
+  }, [isAuthenticated, isOnline, saveState]);
+
+  // Rename category
+  const renameCategory = useCallback(async (oldCategory: string, newCategory: string) => {
+    // Update locally first for immediate UI update
+    setState(prevState => {
+      const updated = {
+        ...prevState,
+        categories: prevState.categories.map(cat => 
+          cat === oldCategory ? newCategory : cat
+        ),
+        expenses: prevState.expenses.map(exp => 
+          exp.category === oldCategory ? { ...exp, category: newCategory } : exp
+        )
+      };
+
+      saveState(updated);
+      return updated;
+    });
+
+    // Try to sync with API if authenticated and online
+    if (isAuthenticated && isOnline) {
+      try {
+        const response = await ApiService.renameCategory(oldCategory, newCategory);
+        if (!response.success) {
+          console.warn('Failed to sync category rename to API:', response.error);
+          // Note: We don't revert here as the API handles the transaction
+        }
+      } catch (error) {
+        console.warn('Failed to sync category rename to API:', error);
+      }
+    }
+  }, [isAuthenticated, isOnline, saveState]);
 
   // Update filters
   const updateFilters = useCallback((newFilters: Partial<Filters>) => {
@@ -229,6 +333,18 @@ export function useExpenses() {
     // If authenticated and online, sync with API
     if (isAuthenticated && isOnline) {
       try {
+        // Sync categories first
+        for (const category of newCategories) {
+          try {
+            const response = await ApiService.createCategory(category);
+            if (!response.success && response.error && !response.error.includes('already exists')) {
+              console.warn(`Failed to sync category ${category} to API:`, response.error);
+            }
+          } catch (error) {
+            console.warn(`Failed to sync category ${category} to API:`, error);
+          }
+        }
+
         // Use bulk create for better performance
         const response = await ApiService.bulkCreateExpenses(newExpenses);
         if (!response.success) {
@@ -279,6 +395,8 @@ export function useExpenses() {
     deleteExpense,
     updateExpense,
     addCategory,
+    deleteCategory,
+    renameCategory,
     updateFilters,
     toggleTheme,
     syncWithApi,

@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { Header } from './Header';
 import { SummaryCards } from './SummaryCards';
 import { ExpenseForm } from './ExpenseForm';
 import { Filters } from './Filters';
@@ -21,17 +20,12 @@ export function Dashboard() {
     expenses,
     categories,
     filters,
-    theme,
     isLoading,
-    isAuthenticated,
-    isOnline,
     addExpense,
     deleteExpense,
     updateExpense,
     addCategory,
-    updateFilters,
-    toggleTheme,
-    importExpenses
+    updateFilters
   } = useExpenses();
 
   const { toasts, removeToast, showSuccess, showError } = useToast();
@@ -75,82 +69,6 @@ export function Dashboard() {
     }
   }, [updateExpense, showSuccess, showError]);
 
-  // Handle export/import
-  const handleExport = useCallback(() => {
-    const data = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      data: { expenses, categories }
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { 
-      type: 'application/json' 
-    });
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'money-tracker.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    showSuccess('Data exported successfully');
-  }, [expenses, categories, showSuccess]);
-
-  const handleImport = useCallback(async (file: File) => {
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      
-      // Validate the imported data structure
-      if (!parsed.data) {
-        showError('Invalid file format: missing data section');
-        return;
-      }
-      
-      if (!Array.isArray(parsed.data.expenses)) {
-        showError('Invalid file format: expenses must be an array');
-        return;
-      }
-      
-      // Validate expense structure
-      const validExpenses = parsed.data.expenses.filter((expense: any) => 
-        expense && 
-        typeof expense.id === 'string' &&
-        typeof expense.date === 'string' &&
-        typeof expense.amount === 'number' &&
-        typeof expense.category === 'string' &&
-        typeof expense.note === 'string'
-      );
-      
-      if (validExpenses.length !== parsed.data.expenses.length) {
-        showError('Some expenses were skipped due to invalid format');
-      }
-      
-      // Show confirmation dialog if there are existing expenses
-      if (expenses.length > 0) {
-        const confirmed = window.confirm(
-          `This will replace your current data (${expenses.length} expenses, ${categories.length} categories) with the imported data (${validExpenses.length} expenses, ${parsed.data.categories?.length || 0} categories). Are you sure?`
-        );
-        if (!confirmed) {
-          showSuccess('Import cancelled');
-          return;
-        }
-      }
-      
-      await importExpenses({
-        expenses: validExpenses,
-        categories: Array.isArray(parsed.data.categories) ? parsed.data.categories : []
-      });
-      
-      // Show different messages based on authentication status
-      const authStatus = isAuthenticated && isOnline ? 'and synced to database' : 'to local storage';
-      showSuccess(`Data imported successfully ${authStatus}: ${validExpenses.length} expenses, ${parsed.data.categories?.length || 0} categories`);
-    } catch (error) {
-      console.error('Import error:', error);
-      showError('Failed to import file: Invalid JSON format');
-    }
-  }, [importExpenses, showSuccess, showError, expenses.length, categories.length, isAuthenticated, isOnline]);
 
   if (isLoading) {
     return (
@@ -164,14 +82,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-bg">
-      <Header
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        onExport={handleExport}
-        onImport={handleImport}
-      />
-      
+    <div>
       <main className="container">
         <SummaryCards
           totalFiltered={totalFiltered}
