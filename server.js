@@ -7,6 +7,7 @@ import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import LineLoginV2 from './line-login-v2.js';
+import LineBotService from './line-bot-service.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { Pool } from 'pg';
@@ -100,6 +101,7 @@ async function ensureSchema() {
       picture text,
       provider text not null check (provider in ('google', 'line')),
       provider_id text not null,
+      line_user_id text unique,
       created_at timestamp with time zone default now(),
       unique(provider, provider_id)
     );
@@ -265,6 +267,20 @@ if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
   console.log('LINE Login v2 strategy enabled');
 } else {
   console.log('LINE OAuth disabled - missing LINE_CHANNEL_ID or LINE_CHANNEL_SECRET');
+}
+
+// LINE Bot Configuration
+let lineBotService = null;
+if (process.env.LINE_BOT_CHANNEL_ID && process.env.LINE_BOT_CHANNEL_SECRET && process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN) {
+  const lineBotConfig = {
+    channelAccessToken: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN,
+    channelSecret: process.env.LINE_BOT_CHANNEL_SECRET,
+  };
+  
+  lineBotService = new LineBotService(lineBotConfig);
+  console.log('LINE Bot service enabled');
+} else {
+  console.log('LINE Bot disabled - missing LINE_BOT_CHANNEL_ID, LINE_BOT_CHANNEL_SECRET, or LINE_BOT_CHANNEL_ACCESS_TOKEN');
 }
 
 // Test endpoint to check LINE configuration
@@ -957,6 +973,103 @@ app.delete('/api/user-prompt', authenticateToken, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// LINE Bot Webhook Endpoint
+if (lineBotService) {
+  app.post('/api/line/webhook', lineBotService.getMiddleware(), async (req, res) => {
+    try {
+      const events = req.body.events;
+      
+      for (const event of events) {
+        await lineBotService.handleEvent(event);
+      }
+      
+      res.status(200).end();
+    } catch (error) {
+      console.error('LINE webhook error:', error);
+      res.status(500).end();
+    }
+  });
+  
+  // Create LINE user
+  app.post('/api/auth/line-user', async (req, res) => {
+    try {
+      const { lineUserId, name, email } = req.body;
+      
+      if (!lineUserId) {
+        return res.status(400).json({ error: 'LINE user ID is required' });
+      }
+      
+      // Check if user already exists
+      const existingUser = await pool.query(
+        'SELECT * FROM users WHERE line_user_id = $1',
+        [lineUserId]
+      );
+      
+      if (existingUser.rows.length > 0) {
+        const token = jwt.sign(
+          { userId: existingUser.rows[0].id, email: existingUser.rows[0].email },
+          JWT_SECRET,
+          { expiresIn: '30d' }
+        );
+        return res.json({ token, user: existingUser.rows[0] });
+      }
+      
+      // Create new user
+      const result = await pool.query(
+        'INSERT INTO users (line_user_id, name, email, picture) VALUES ($1, $2, $3, $4) RETURNING *',
+        [lineUserId, name, email, null]
+      );
+      
+      const user = result.rows[0];
+      
+      // Add default categories and prompt for new user
+      await addDefaultCategoriesForUser(user.id);
+      await addDefaultPromptForUser(user.id);
+      
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+      
+      res.json({ token, user });
+    } catch (error) {
+      console.error('Error creating LINE user:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get LINE user by ID
+  app.get('/api/auth/line-user/:lineUserId', async (req, res) => {
+    try {
+      const { lineUserId } = req.params;
+      
+      const result = await pool.query(
+        'SELECT * FROM users WHERE line_user_id = $1',
+        [lineUserId]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const user = result.rows[0];
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+      
+      res.json({ token, user });
+    } catch (error) {
+      console.error('Error getting LINE user:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  console.log('LINE Bot webhook endpoint enabled at /api/line/webhook');
+}
 
 const port = process.env.PORT || 3001;
 ensureSchema().then(() => {

@@ -17,6 +17,7 @@ A modern, responsive money tracking application built with React, TypeScript, an
 - **Toast Notifications**: User-friendly feedback system
 - **Secure Backend**: JWT-based authentication with PostgreSQL
 - **🤖 AI-Powered Chat Mode**: Natural language expense entry with LLM classification
+- **📱 LINE Bot Integration**: Chat with your expense tracker via LINE Bot
 - **🧠 Smart Categorization**: Automatic category suggestions using multiple LLM providers
 - **🆓 Free LLM Integration**: Support for Groq, OpenAI, and Hugging Face APIs
 
@@ -190,6 +191,24 @@ The original vanilla JavaScript application has been completely refactored to Re
 - ✅ Enhanced maintainability
 - ✅ Type safety added
 - ✅ Modern development workflow
+
+## 📱 LINE Bot Integration
+
+The application now includes a LINE Bot that allows users to track expenses through natural language messages on LINE.
+
+### Features
+- **Natural Language Processing**: Send messages like "I spent $25 on lunch today"
+- **Automatic Categorization**: AI-powered expense categorization
+- **Real-time Responses**: Instant confirmation and feedback
+- **User Management**: Automatic user creation for LINE users
+
+### Setup
+1. Create a LINE Bot channel in the [LINE Developers Console](https://developers.line.biz/)
+2. Configure your environment variables (see `env.example`)
+3. Set up your webhook URL
+4. Deploy and test
+
+For detailed setup instructions, see [LINE Bot Setup Guide](docs/line-bot-setup.md).
 
 ## 📄 License
 
