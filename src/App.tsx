@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Dashboard } from './components/Dashboard';
 import { CategoryManagement } from './components/CategoryManagement';
+import { Summary } from './components/Summary';
 import { Header } from './components/Header';
 import { useExpenses } from './hooks/useExpenses';
 import { useToast } from './hooks/useToast';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'categories'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'categories' | 'summary'>('dashboard');
   const {
     expenses,
     categories,
@@ -160,6 +161,11 @@ function App() {
               onAddCategory={handleAddCategory}
               onDeleteCategory={handleDeleteCategory}
               onRenameCategory={handleRenameCategory}
+            />
+          )}
+          {activeTab === 'summary' && (
+            <Summary
+              expenses={expenses}
             />
           )}
         </div>

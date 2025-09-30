@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface BadgeProps {
-  variant?: 'default' | 'category';
+  variant?: 'default' | 'category' | 'secondary' | 'outline';
   children: React.ReactNode;
   className?: string;
 }
@@ -12,7 +12,12 @@ export const Badge: React.FC<BadgeProps> = ({
   className = ''
 }) => {
   const baseClasses = 'badge';
-  const variantClasses = variant === 'category' ? 'badge-category' : '';
+  const variantClasses = {
+    default: '',
+    category: 'badge-category',
+    secondary: 'badge-secondary',
+    outline: 'badge-outline'
+  }[variant];
   
   const classes = `${baseClasses} ${variantClasses} ${className}`;
 

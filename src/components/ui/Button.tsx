@@ -2,7 +2,7 @@ import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'icon';
+  variant?: 'primary' | 'secondary' | 'danger' | 'icon' | 'outline' | 'destructive';
   size?: 'sm' | 'md' | 'lg';
   icon?: LucideIcon;
   loading?: boolean;
@@ -25,6 +25,8 @@ export const Button: React.FC<ButtonProps> = ({
     primary: 'btn bg-gradient-to-r from-accent to-accent-hover text-white shadow-custom hover:-translate-y-0.5 hover:shadow-custom-lg hover:brightness-110',
     secondary: 'btn-secondary bg-panel text-text border-2 border-border shadow-none hover:bg-panel-2 hover:border-accent hover:text-accent hover:shadow-custom',
     danger: 'btn-danger bg-gradient-to-r from-danger to-danger shadow-custom hover:shadow-custom-lg hover:brightness-110',
+    destructive: 'btn-danger bg-gradient-to-r from-red-500 to-red-600 text-white shadow-custom hover:shadow-custom-lg hover:brightness-110',
+    outline: 'btn-secondary bg-transparent text-text border-2 border-border shadow-none hover:bg-panel-2 hover:border-accent hover:text-accent hover:shadow-custom',
     icon: 'btn-icon bg-panel border border-border text-text hover:bg-panel-2 hover:border-accent hover:-translate-y-0.5 hover:shadow-custom'
   };
 

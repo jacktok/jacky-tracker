@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Upload, Download, Menu, X, Settings, BarChart3, Tag } from 'lucide-react';
+import { Moon, Sun, Upload, Download, Menu, X, Settings, BarChart3, Tag, PieChart } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AuthButton } from './AuthButton';
 
@@ -8,8 +8,8 @@ interface HeaderProps {
   onToggleTheme: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
-  activeTab?: 'dashboard' | 'categories';
-  onTabChange?: (tab: 'dashboard' | 'categories') => void;
+  activeTab?: 'dashboard' | 'categories' | 'summary';
+  onTabChange?: (tab: 'dashboard' | 'categories' | 'summary') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleTabClick = (tab: 'dashboard' | 'categories') => {
+  const handleTabClick = (tab: 'dashboard' | 'categories' | 'summary') => {
     onTabChange?.(tab);
     setIsMobileMenuOpen(false);
   };
@@ -117,6 +117,17 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Tag size={16} className="inline mr-1.5" />
                 Categories
+              </button>
+              <button
+                onClick={() => handleTabClick('summary')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'summary'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <PieChart size={16} className="inline mr-1.5" />
+                Summary
               </button>
             </div>
           )}
@@ -208,6 +219,17 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Tag size={16} />
                 Manage Categories
+              </button>
+              <button
+                onClick={() => handleTabClick('summary')}
+                className={`w-full px-3 py-2 text-left text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${
+                  activeTab === 'summary'
+                    ? 'bg-accent text-white'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <PieChart size={16} />
+                Summary & Analytics
               </button>
             </div>
           )}
