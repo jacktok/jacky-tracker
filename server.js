@@ -6,7 +6,7 @@ import cors from 'cors';
 import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { Strategy as LineStrategy } from 'passport-line';
+import LineLoginV2 from './line-login-v2.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { Pool } from 'pg';
@@ -104,6 +104,19 @@ async function ensureSchema() {
       unique(provider, provider_id)
     );
     
+    -- Account linking table to support multiple providers per user
+    create table if not exists user_providers (
+      id uuid primary key default gen_random_uuid(),
+      user_id uuid not null references users(id) on delete cascade,
+      provider text not null check (provider in ('google', 'line')),
+      provider_id text not null,
+      email text,
+      name text,
+      picture text,
+      created_at timestamp with time zone default now(),
+      unique(provider, provider_id)
+    );
+    
     create table if not exists categories (
       id uuid primary key default gen_random_uuid(),
       user_id uuid not null references users(id) on delete cascade,
@@ -145,34 +158,87 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback"
-  }, async (accessToken, refreshToken, profile, done) => {
+  }, async (req, accessToken, refreshToken, profile, done) => {
     try {
-      // Check if user exists
-      let user = await pool.query(
-        'SELECT * FROM users WHERE provider = $1 AND provider_id = $2',
-        ['google', profile.id]
+      const email = profile.emails[0].value;
+      const providerId = profile.id;
+      
+      // Check if this Google account is already linked to a user
+      let userProvider = await pool.query(
+        'SELECT up.*, u.* FROM user_providers up JOIN users u ON up.user_id = u.id WHERE up.provider = $1 AND up.provider_id = $2',
+        ['google', providerId]
       );
 
-      if (user.rows.length === 0) {
-        // Create new user
-        const result = await pool.query(
+      if (userProvider.rows.length > 0) {
+        // User exists, return the main user record
+        return done(null, userProvider.rows[0]);
+      }
+
+      // Check if a user with this email already exists
+      let existingUser = await pool.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
+
+      if (existingUser.rows.length > 0) {
+        // User exists with this email, link this Google account to existing user
+        await pool.query(
+          'INSERT INTO user_providers (user_id, provider, provider_id, email, name, picture) VALUES ($1, $2, $3, $4, $5, $6)',
+          [
+            existingUser.rows[0].id,
+            'google',
+            providerId,
+            email,
+            profile.displayName,
+            profile.photos[0]?.value
+          ]
+        );
+        return done(null, existingUser.rows[0]);
+      }
+
+      // Create new user and link Google account
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        // Create main user record
+        const userResult = await client.query(
           'INSERT INTO users (email, name, picture, provider, provider_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
           [
-            profile.emails[0].value,
+            email,
             profile.displayName,
             profile.photos[0]?.value,
             'google',
-            profile.id
+            providerId
           ]
         );
-        user = result;
+        
+        // Add to user_providers table for consistency
+        await client.query(
+          'INSERT INTO user_providers (user_id, provider, provider_id, email, name, picture) VALUES ($1, $2, $3, $4, $5, $6)',
+          [
+            userResult.rows[0].id,
+            'google',
+            providerId,
+            email,
+            profile.displayName,
+            profile.photos[0]?.value
+          ]
+        );
+        
+        await client.query('COMMIT');
         
         // Add default categories and prompt for new user
-        await addDefaultCategoriesForUser(user.rows[0].id);
-        await addDefaultPromptForUser(user.rows[0].id);
+        await addDefaultCategoriesForUser(userResult.rows[0].id);
+        await addDefaultPromptForUser(userResult.rows[0].id);
+        
+        return done(null, userResult.rows[0]);
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
       }
-
-      return done(null, user.rows[0]);
     } catch (error) {
       return done(error, null);
     }
@@ -182,47 +248,37 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   console.log('Google OAuth disabled - missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
 }
 
+// Initialize LINE Login v2
+let lineLogin = null;
 if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
-  passport.use(new LineStrategy({
-    channelID: process.env.LINE_CHANNEL_ID,
-    channelSecret: process.env.LINE_CHANNEL_SECRET,
-    callbackURL: process.env.LINE_CALLBACK_URL || "/api/auth/line/callback"
-  }, async (accessToken, refreshToken, profile, done) => {
-    try {
-      // Check if user exists
-      let user = await pool.query(
-        'SELECT * FROM users WHERE provider = $1 AND provider_id = $2',
-        ['line', profile.id]
-      );
-
-      if (user.rows.length === 0) {
-        // Create new user
-        const result = await pool.query(
-          'INSERT INTO users (email, name, picture, provider, provider_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-          [
-            profile.emails?.[0]?.value || `${profile.id}@line.user`,
-            profile.displayName,
-            profile.photos?.[0]?.value,
-            'line',
-            profile.id
-          ]
-        );
-        user = result;
-        
-        // Add default categories and prompt for new user
-        await addDefaultCategoriesForUser(user.rows[0].id);
-        await addDefaultPromptForUser(user.rows[0].id);
-      }
-
-      return done(null, user.rows[0]);
-    } catch (error) {
-      return done(error, null);
-    }
-  }));
-  console.log('LINE OAuth strategy enabled');
+  console.log('LINE Login v2 Configuration:');
+  console.log('- Channel ID:', process.env.LINE_CHANNEL_ID);
+  console.log('- Channel Secret:', process.env.LINE_CHANNEL_SECRET ? '***hidden***' : 'NOT SET');
+  console.log('- Callback URL:', process.env.LINE_CALLBACK_URL || "/api/auth/line/callback");
+  
+  lineLogin = new LineLoginV2(
+    process.env.LINE_CHANNEL_ID,
+    process.env.LINE_CHANNEL_SECRET,
+    process.env.LINE_CALLBACK_URL || "/api/auth/line/callback"
+  );
+  
+  console.log('LINE Login v2 strategy enabled');
 } else {
   console.log('LINE OAuth disabled - missing LINE_CHANNEL_ID or LINE_CHANNEL_SECRET');
 }
+
+// Test endpoint to check LINE configuration
+app.get('/api/test/line-config', (req, res) => {
+  const config = {
+    hasChannelId: !!process.env.LINE_CHANNEL_ID,
+    hasChannelSecret: !!process.env.LINE_CHANNEL_SECRET,
+    channelId: process.env.LINE_CHANNEL_ID,
+    callbackUrl: process.env.LINE_CALLBACK_URL || "/api/auth/line/callback",
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    lineLoginInitialized: !!lineLogin
+  };
+  res.json(config);
+});
 
 // Passport serialization
 passport.serializeUser((user, done) => {
@@ -269,44 +325,249 @@ app.get('/health', async (req, res) => {
 // Auth routes - only register if strategies are enabled
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+  
+  // Prepare for linking Google account
+  app.post('/api/auth/google/prepare-link', authenticateToken, (req, res) => {
+    try {
+      // Store the current user ID in session for the callback
+      req.session.linkingUserId = req.user.userId;
+      res.json({ success: true, message: 'Ready to link Google account' });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to prepare linking' });
+    }
+  });
+  
+  // Special endpoint for linking Google account when already logged in
+  app.get('/api/auth/google/link', (req, res, next) => {
+    // Check if user has prepared for linking
+    if (!req.session.linkingUserId) {
+      return res.status(401).json({ error: 'Please initiate linking from the settings page' });
+    }
+    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  });
 
   app.get('/api/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login?error=google' }),
-    (req, res) => {
-      const token = jwt.sign(
-        { 
-          userId: req.user.id, 
-          email: req.user.email,
-          name: req.user.name 
-        },
-        JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-      
-      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${token}`);
+    async (req, res) => {
+      try {
+        // Check if this was a linking request
+        if (req.session.linkingUserId) {
+          const linkingUserId = req.session.linkingUserId;
+          delete req.session.linkingUserId;
+          
+          // Link the Google account to the existing user
+          await pool.query(
+            'INSERT INTO user_providers (user_id, provider, provider_id, email, name, picture) VALUES ($1, $2, $3, $4, $5, $6)',
+            [
+              linkingUserId,
+              'google',
+              req.user.provider_id,
+              req.user.email,
+              req.user.name,
+              req.user.picture
+            ]
+          );
+          
+          res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?linked=google`);
+          return;
+        }
+        
+        // Normal login flow
+        const token = jwt.sign(
+          { 
+            userId: req.user.id, 
+            email: req.user.email,
+            name: req.user.name 
+          },
+          JWT_SECRET,
+          { expiresIn: '30d' }
+        );
+        
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${token}`);
+      } catch (error) {
+        console.error('Google callback error:', error);
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=google`);
+      }
     }
   );
 }
 
 if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
-  app.get('/api/auth/line', passport.authenticate('line'));
+  // LINE Login v2 routes
+  app.get('/api/auth/line', (req, res) => {
+    if (!lineLogin) {
+      return res.status(500).json({ error: 'LINE Login not configured' });
+    }
+    const state = Math.random().toString(36).substring(7);
+    req.session.lineState = state;
+    const authUrl = lineLogin.getAuthUrl(state);
+    res.redirect(authUrl);
+  });
+  
+  // Prepare for linking LINE account
+  app.post('/api/auth/line/prepare-link', authenticateToken, (req, res) => {
+    try {
+      // Store the current user ID in session for the callback
+      req.session.linkingUserId = req.user.userId;
+      res.json({ success: true, message: 'Ready to link LINE account' });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to prepare linking' });
+    }
+  });
+  
+  // Special endpoint for linking LINE account when already logged in
+  app.get('/api/auth/line/link', (req, res) => {
+    if (!lineLogin) {
+      return res.status(500).json({ error: 'LINE Login not configured' });
+    }
+    // Check if user has prepared for linking
+    if (!req.session.linkingUserId) {
+      return res.status(401).json({ error: 'Please initiate linking from the settings page' });
+    }
+    const state = Math.random().toString(36).substring(7);
+    req.session.lineState = state;
+    const authUrl = lineLogin.getAuthUrl(state);
+    res.redirect(authUrl);
+  });
 
-  app.get('/api/auth/line/callback',
-    passport.authenticate('line', { failureRedirect: '/login?error=line' }),
-    (req, res) => {
+  app.get('/api/auth/line/callback', async (req, res) => {
+    if (!lineLogin) {
+      return res.status(500).json({ error: 'LINE Login not configured' });
+    }
+    try {
+      const { code, state } = req.query;
+      
+      // Verify state parameter
+      if (!state || state !== req.session.lineState) {
+        console.error('LINE OAuth: Invalid state parameter');
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?error=line_oauth_failed`);
+      }
+      
+      // Exchange code for token
+      const tokenData = await lineLogin.exchangeCodeForToken(code);
+      console.log('LINE token data received:', { 
+        access_token: tokenData.access_token ? '***received***' : 'missing',
+        id_token: tokenData.id_token ? '***received***' : 'missing'
+      });
+      
+      // Get user profile from ID token (more reliable than API call)
+      let profile;
+      if (tokenData.id_token) {
+        profile = await lineLogin.getIdTokenUser(tokenData.id_token);
+      } else {
+        // Fallback to API call if no ID token
+        profile = await lineLogin.getUserProfile(tokenData.access_token);
+      }
+      
+      console.log('LINE profile received:', { 
+        id: profile.id, 
+        name: profile.displayName,
+        email: profile.email ? '***has email***' : 'no email'
+      });
+      
+      const email = profile.email || `${profile.id}@line.user`;
+      const providerId = profile.id;
+      
+      // Check if this LINE account is already linked to a user
+      let userProvider = await pool.query(
+        'SELECT up.*, u.* FROM user_providers up JOIN users u ON up.user_id = u.id WHERE up.provider = $1 AND up.provider_id = $2',
+        ['line', providerId]
+      );
+
+      let user;
+      if (userProvider.rows.length > 0) {
+        // User exists, return the main user record
+        user = userProvider.rows[0];
+      } else if (req.session.linkingUserId) {
+        // This is a linking request
+        const linkingUserId = req.session.linkingUserId;
+        delete req.session.linkingUserId;
+        
+        // Link the LINE account to the existing user
+        await pool.query(
+          'INSERT INTO user_providers (user_id, provider, provider_id, email, name, picture) VALUES ($1, $2, $3, $4, $5, $6)',
+          [
+            linkingUserId,
+            'line',
+            providerId,
+            email,
+            profile.displayName,
+            profile.pictureUrl
+          ]
+        );
+        
+        // Get the existing user
+        const existingUser = await pool.query('SELECT * FROM users WHERE id = $1', [linkingUserId]);
+        user = existingUser.rows[0];
+        
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?linked=line`);
+        return;
+      } else {
+        // Create new user and link LINE account
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          
+          // Create main user record
+          const userResult = await client.query(
+            'INSERT INTO users (email, name, picture, provider, provider_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [
+              email,
+              profile.displayName,
+              profile.pictureUrl,
+              'line',
+              providerId
+            ]
+          );
+          
+          // Add to user_providers table for consistency
+          await client.query(
+            'INSERT INTO user_providers (user_id, provider, provider_id, email, name, picture) VALUES ($1, $2, $3, $4, $5, $6)',
+            [
+              userResult.rows[0].id,
+              'line',
+              providerId,
+              email,
+              profile.displayName,
+              profile.pictureUrl
+            ]
+          );
+          
+          await client.query('COMMIT');
+          
+          // Add default categories and prompt for new user
+          await addDefaultCategoriesForUser(userResult.rows[0].id);
+          await addDefaultPromptForUser(userResult.rows[0].id);
+          
+          user = userResult.rows[0];
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
+        }
+      }
+      
+      // Clean up session state
+      delete req.session.lineState;
+      
+      // Normal login flow
       const token = jwt.sign(
         { 
-          userId: req.user.id, 
-          email: req.user.email,
-          name: req.user.name 
+          userId: user.id, 
+          email: user.email,
+          name: user.name 
         },
         JWT_SECRET,
         { expiresIn: '30d' }
       );
       
       res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${token}`);
+    } catch (error) {
+      console.error('LINE callback error:', error);
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?error=line_oauth_failed`);
     }
-  );
+  });
 }
 
 // Get current user info
@@ -330,6 +591,53 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
       provider: user.provider,
       createdAt: user.created_at
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get linked accounts for current user
+app.get('/api/auth/linked-accounts', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT provider, email, name, picture, created_at FROM user_providers WHERE user_id = $1 ORDER BY created_at',
+      [req.user.userId]
+    );
+    
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Unlink an account
+app.delete('/api/auth/linked-accounts/:provider', authenticateToken, async (req, res) => {
+  const { provider } = req.params;
+  
+  if (!['google', 'line'].includes(provider)) {
+    return res.status(400).json({ error: 'Invalid provider' });
+  }
+  
+  try {
+    // Check if user has other linked accounts
+    const otherAccounts = await pool.query(
+      'SELECT COUNT(*) as count FROM user_providers WHERE user_id = $1 AND provider != $2',
+      [req.user.userId, provider]
+    );
+    
+    if (parseInt(otherAccounts.rows[0].count) === 0) {
+      return res.status(400).json({ 
+        error: 'Cannot unlink the only remaining account. Link another account first.' 
+      });
+    }
+    
+    // Remove the linked account
+    await pool.query(
+      'DELETE FROM user_providers WHERE user_id = $1 AND provider = $2',
+      [req.user.userId, provider]
+    );
+    
+    res.json({ message: 'Account unlinked successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

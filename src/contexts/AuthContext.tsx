@@ -2,10 +2,21 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { AuthState } from '../types';
 import { api } from '../services/api';
 
+interface LinkedAccount {
+  provider: string;
+  email: string;
+  name: string;
+  picture?: string;
+  created_at: string;
+}
+
 interface AuthContextType extends AuthState {
   login: (provider: 'google' | 'line') => void;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  linkAccount: (provider: 'google' | 'line') => void;
+  linkedAccounts: LinkedAccount[];
+  loadLinkedAccounts: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +39,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: false,
     isLoading: true,
   });
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
 
   const checkAuth = async () => {
     try {
@@ -79,6 +91,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     window.location.href = `/api/auth/${provider}`;
   };
 
+  const linkAccount = (provider: 'google' | 'line') => {
+    // Redirect to OAuth provider linking endpoint
+    window.location.href = `/api/auth/${provider}/link`;
+  };
+
+  const loadLinkedAccounts = async () => {
+    if (!authState.isAuthenticated) return;
+    
+    try {
+      const response = await api.get('/api/auth/linked-accounts');
+      if (response.success) {
+        setLinkedAccounts(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load linked accounts:', error);
+    }
+  };
+
   const logout = async () => {
     try {
       await api.post('/api/auth/logout');
@@ -118,6 +148,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Get user info
         await checkAuth();
+        
+        // Load linked accounts after successful auth
+        await loadLinkedAccounts();
       }
     };
 
@@ -134,6 +167,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     checkAuth,
+    linkAccount,
+    linkedAccounts,
+    loadLinkedAccounts,
   };
 
   return (

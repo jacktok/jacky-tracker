@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Upload, Download, Menu, X, Settings, BarChart3, Tag, PieChart, MessageCircle } from 'lucide-react';
+import { Moon, Sun, Upload, Download, Menu, X, Settings, BarChart3, Tag, PieChart, MessageCircle, User } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AuthButton } from './AuthButton';
 
@@ -8,8 +8,8 @@ interface HeaderProps {
   onToggleTheme: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
-  activeTab?: 'dashboard' | 'categories' | 'summary' | 'chat';
-  onTabChange?: (tab: 'dashboard' | 'categories' | 'summary' | 'chat') => void;
+  activeTab?: 'dashboard' | 'categories' | 'summary' | 'chat' | 'settings';
+  onTabChange?: (tab: 'dashboard' | 'categories' | 'summary' | 'chat' | 'settings') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleTabClick = (tab: 'dashboard' | 'categories' | 'summary' | 'chat') => {
+  const handleTabClick = (tab: 'dashboard' | 'categories' | 'summary' | 'chat' | 'settings') => {
     onTabChange?.(tab);
     setIsMobileMenuOpen(false);
   };
@@ -139,6 +139,17 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <MessageCircle size={16} className="inline mr-1.5" />
                 Chat
+              </button>
+              <button
+                onClick={() => handleTabClick('settings')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'settings'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <User size={16} className="inline mr-1.5" />
+                Settings
               </button>
             </div>
           )}
@@ -270,6 +281,17 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <MessageCircle size={16} />
                 Chat Mode
+              </button>
+              <button
+                onClick={() => handleTabClick('settings')}
+                className={`w-full px-3 py-2 text-left text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${
+                  activeTab === 'settings'
+                    ? 'bg-accent text-white'
+                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                }`}
+              >
+                <User size={16} />
+                Account Settings
               </button>
             </div>
           )}

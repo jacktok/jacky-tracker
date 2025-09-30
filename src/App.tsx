@@ -4,12 +4,13 @@ import { Dashboard } from './components/Dashboard';
 import { CategoryManagement } from './components/CategoryManagement';
 import { Summary } from './components/Summary';
 import { ChatMode } from './components/ChatMode';
+import { AccountManagement } from './components/AccountManagement';
 import { Header } from './components/Header';
 import { useExpenses } from './hooks/useExpenses';
 import { useToast } from './hooks/useToast';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'categories' | 'summary' | 'chat'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'categories' | 'summary' | 'chat' | 'settings'>('dashboard');
   const {
     expenses,
     categories,
@@ -155,7 +156,7 @@ function App() {
           onExport={handleExport}
           onImport={handleImport}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => setActiveTab(tab as any)}
         />
 
         {/* Main Content */}
@@ -176,6 +177,7 @@ function App() {
             />
           )}
           {activeTab === 'chat' && <ChatMode />}
+          {activeTab === 'settings' && <AccountManagement />}
         </div>
       </div>
     </ProtectedRoute>
