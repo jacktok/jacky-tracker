@@ -333,8 +333,16 @@ export function useExpenses() {
     // If authenticated and online, sync with API
     if (isAuthenticated && isOnline) {
       try {
-        // Sync categories first
-        for (const category of newCategories) {
+        // Get existing categories first to avoid conflicts
+        const existingCategoriesResponse = await ApiService.getCategories();
+        const existingCategories = existingCategoriesResponse.success && existingCategoriesResponse.data 
+          ? existingCategoriesResponse.data 
+          : [];
+        
+        // Only create categories that don't already exist
+        const categoriesToCreate = newCategories.filter(category => !existingCategories.includes(category));
+        
+        for (const category of categoriesToCreate) {
           try {
             const response = await ApiService.createCategory(category);
             if (!response.success && response.error && !response.error.includes('already exists')) {

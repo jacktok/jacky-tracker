@@ -128,12 +128,18 @@ function App() {
       }
       
       // Import the data
-      await importExpenses({
-        expenses: validExpenses,
-        categories: validCategories
-      });
-      
-      showSuccess(`Data imported successfully: ${validExpenses.length} expenses, ${validCategories.length} categories`);
+      try {
+        await importExpenses({
+          expenses: validExpenses,
+          categories: validCategories
+        });
+        
+        showSuccess(`Data imported successfully: ${validExpenses.length} expenses, ${validCategories.length} categories`);
+      } catch (importError) {
+        console.error('Import error:', importError);
+        showError('Failed to import data. Please try again.');
+        return;
+      }
     } catch (error) {
       console.error('Import error:', error);
       showError('Failed to import file: Invalid JSON format');
