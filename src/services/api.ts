@@ -3,16 +3,28 @@ import { Expense, ApiResponse } from '../types';
 const API_BASE = '';
 
 export class ApiService {
+  private static authToken: string | null = null;
+
+  static setAuthToken(token: string | null) {
+    this.authToken = token;
+  }
+
   private static async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string>),
+      };
+
+      if (this.authToken) {
+        headers['Authorization'] = `Bearer ${this.authToken}`;
+      }
+
       const response = await fetch(`${API_BASE}${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers,
         ...options,
       });
 
@@ -23,7 +35,7 @@ export class ApiService {
       const data = await response.json();
       return { data, success: true };
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('API request failed endpoint:', endpoint, error);
       return { 
         error: error instanceof Error ? error.message : 'Unknown error',
         success: false 
@@ -70,5 +82,30 @@ export class ApiService {
       body: JSON.stringify({ expenses }),
     });
   }
+
+  // Auth endpoints
+  static async get(endpoint: string): Promise<ApiResponse<any>> {
+    return this.request(endpoint, { method: 'GET' });
+  }
+
+  static async post(endpoint: string, data?: any): Promise<ApiResponse<any>> {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  static async put(endpoint: string, data?: any): Promise<ApiResponse<any>> {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  static async delete(endpoint: string): Promise<ApiResponse<any>> {
+    return this.request(endpoint, { method: 'DELETE' });
+  }
 }
+
+export const api = ApiService;
 

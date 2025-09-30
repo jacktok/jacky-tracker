@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Expense, Filters, AppState } from '../types';
 import { ApiService } from '../services/api';
 import { STORAGE_KEY, defaultCategories } from '../utils';
+import { useAuth } from '../contexts/AuthContext';
 
 export function useExpenses() {
+  const { isAuthenticated } = useAuth();
   const [state, setState] = useState<AppState>({
     expenses: [],
     categories: [...defaultCategories],
@@ -58,6 +60,12 @@ export function useExpenses() {
 
   // Try to sync with API
   const syncWithApi = useCallback(async () => {
+    // Only sync with API if user is authenticated
+    if (!isAuthenticated) {
+      setIsOnline(false);
+      return;
+    }
+
     try {
       const isHealthy = await ApiService.healthCheck();
       setIsOnline(isHealthy);
@@ -75,7 +83,7 @@ export function useExpenses() {
       console.warn('Failed to sync with API:', error);
       setIsOnline(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Add expense
   const addExpense = useCallback(async (expenseData: Omit<Expense, 'id'>) => {
@@ -88,8 +96,8 @@ export function useExpenses() {
       expenses: [...prevState.expenses, tempExpense]
     }));
 
-    // Try to sync with API
-    if (isOnline) {
+    // Try to sync with API only if authenticated and online
+    if (isAuthenticated && isOnline) {
       try {
         const response = await ApiService.createExpense(expenseData);
         if (response.success && response.data) {
@@ -104,7 +112,7 @@ export function useExpenses() {
         console.warn('Failed to sync expense to API:', error);
       }
     }
-  }, [isOnline]);
+  }, [isAuthenticated, isOnline]);
 
   // Delete expense
   const deleteExpense = useCallback(async (id: string) => {
@@ -114,15 +122,15 @@ export function useExpenses() {
       expenses: prevState.expenses.filter(exp => exp.id !== id)
     }));
 
-    // Try to sync with API
-    if (isOnline) {
+    // Try to sync with API only if authenticated and online
+    if (isAuthenticated && isOnline) {
       try {
         await ApiService.deleteExpense(id);
       } catch (error) {
         console.warn('Failed to delete expense from API:', error);
       }
     }
-  }, [isOnline]);
+  }, [isAuthenticated, isOnline]);
 
   // Update expense
   const updateExpense = useCallback(async (id: string, expenseData: Omit<Expense, 'id'>) => {
@@ -134,8 +142,8 @@ export function useExpenses() {
       )
     }));
 
-    // Try to sync with API
-    if (isOnline) {
+    // Try to sync with API only if authenticated and online
+    if (isAuthenticated && isOnline) {
       try {
         const response = await ApiService.updateExpense(id, expenseData);
         if (response.success && response.data) {
@@ -150,7 +158,7 @@ export function useExpenses() {
         console.warn('Failed to update expense in API:', error);
       }
     }
-  }, [isOnline]);
+  }, [isAuthenticated, isOnline]);
 
   // Add category
   const addCategory = useCallback((category: string) => {

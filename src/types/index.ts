@@ -47,3 +47,24 @@ export interface ApiResponse<T> {
   success: boolean;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+  provider: 'google' | 'line';
+  providerId: string;
+  createdAt: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
+
+export interface LoginResponse {
+  user: User;
+  token: string;
+}
+

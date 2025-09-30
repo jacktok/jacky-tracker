@@ -1,6 +1,7 @@
 import React from 'react';
 import { Moon, Sun, Upload, Download } from 'lucide-react';
 import { Button } from './ui/Button';
+import { AuthButton } from './AuthButton';
 
 interface HeaderProps {
   theme: 'light' | 'dark';
@@ -26,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="header">
       <h1 className="header__title">💰 Money Tracker</h1>
       <div className="header__actions">
+        <AuthButton />
+        
         <Button
           variant="icon"
           onClick={onToggleTheme}

@@ -1,19 +1,21 @@
 # Jacky Money Tracker
 
-A modern, responsive money tracking application built with React, TypeScript, and Tailwind CSS.
+A modern, responsive money tracking application built with React, TypeScript, and Tailwind CSS with user authentication support.
 
 ## 🚀 Features
 
+- **User Authentication**: Sign in with Google or LINE accounts
+- **User-Specific Data**: Each user has their own expense data
 - **Modern UI**: Built with React 18 and TypeScript for type safety
 - **Responsive Design**: Mobile-first design with Tailwind CSS
 - **Real-time Updates**: Instant UI updates with optimistic updates
-- **Offline Support**: Works offline with local storage fallback
 - **Data Export/Import**: JSON export and import functionality
 - **Theme Support**: Light and dark theme toggle
 - **Category Management**: Dynamic category creation and management
 - **Advanced Filtering**: Date range, category, and text search filters
 - **Inline Editing**: Edit expenses directly in the table
 - **Toast Notifications**: User-friendly feedback system
+- **Secure Backend**: JWT-based authentication with PostgreSQL
 
 ## 🛠️ Tech Stack
 
@@ -21,8 +23,10 @@ A modern, responsive money tracking application built with React, TypeScript, an
 - **Styling**: Tailwind CSS with custom design system
 - **Build Tool**: Vite
 - **Icons**: Lucide React
-- **Backend**: Express.js (existing)
-- **Database**: PostgreSQL (existing)
+- **Authentication**: Passport.js with JWT
+- **OAuth Providers**: Google OAuth 2.0, LINE Login
+- **Backend**: Express.js with session management
+- **Database**: PostgreSQL with user-specific data
 
 ## 📁 Project Structure
 
@@ -41,18 +45,22 @@ src/
 │   ├── ExpenseForm.tsx
 │   ├── Filters.tsx
 │   ├── ExpenseTable.tsx
-│   └── CategoryBreakdown.tsx
+│   ├── CategoryBreakdown.tsx
+│   ├── AuthButton.tsx   # Authentication button
+│   └── ProtectedRoute.tsx # Route protection
+├── contexts/            # React contexts
+│   └── AuthContext.tsx  # Authentication context
 ├── hooks/               # Custom React hooks
 │   ├── useExpenses.ts   # Main state management
 │   └── useToast.ts      # Toast notifications
 ├── services/            # API services
-│   └── api.ts
+│   └── api.ts           # API client with auth
 ├── types/               # TypeScript type definitions
-│   └── index.ts
+│   └── index.ts         # Including User and Auth types
 ├── utils/               # Utility functions
 │   └── index.ts
 ├── App.tsx              # Main app component
-├── main.tsx             # React entry point
+├── main.tsx             # React entry point with AuthProvider
 └── index.css            # Global styles with Tailwind
 ```
 
@@ -72,6 +80,9 @@ The application uses a custom design system built on top of Tailwind CSS:
 
 - Node.js 18+ 
 - npm or yarn
+- PostgreSQL database
+- Google OAuth 2.0 credentials
+- LINE Login credentials (optional)
 
 ### Installation
 
@@ -80,12 +91,37 @@ The application uses a custom design system built on top of Tailwind CSS:
 npm install
 ```
 
-2. Start the development server:
+2. Set up environment variables:
+```bash
+cp env.example .env
+```
+
+3. Configure your `.env` file with:
+   - Database connection string
+   - JWT and session secrets
+   - Google OAuth credentials
+   - LINE Login credentials (optional)
+
+4. Set up OAuth providers:
+   
+   **Google OAuth 2.0:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select existing one
+   - Enable Google+ API
+   - Create OAuth 2.0 credentials
+   - Add authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
+   
+   **LINE Login (Optional):**
+   - Go to [LINE Developers Console](https://developers.line.biz/)
+   - Create a new channel
+   - Configure callback URL: `http://localhost:3001/api/auth/line/callback`
+
+5. Start the development server:
 ```bash
 npm run dev
 ```
 
-3. Start the backend server (in another terminal):
+6. Start the backend server (in another terminal):
 ```bash
 npm run server
 ```
