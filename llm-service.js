@@ -11,19 +11,19 @@ class LLMService {
     this.huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
   }
 
-  async classifyExpense(message, amount, description, existingCategories = []) {
+  async classifyExpense(message, amount, description, existingCategories = [], customPrompt = null) {
     try {
       switch (this.provider) {
         case 'groq':
-          return await this.classifyWithGroq(message, amount, description, existingCategories);
+          return await this.classifyWithGroq(message, amount, description, existingCategories, customPrompt);
         case 'gemini':
-          return await this.classifyWithGemini(message, amount, description, existingCategories);
+          return await this.classifyWithGemini(message, amount, description, existingCategories, customPrompt);
         case 'claude':
-          return await this.classifyWithClaude(message, amount, description, existingCategories);
+          return await this.classifyWithClaude(message, amount, description, existingCategories, customPrompt);
         case 'openai':
-          return await this.classifyWithOpenAI(message, amount, description, existingCategories);
+          return await this.classifyWithOpenAI(message, amount, description, existingCategories, customPrompt);
         case 'huggingface':
-          return await this.classifyWithHuggingFace(message, amount, description, existingCategories);
+          return await this.classifyWithHuggingFace(message, amount, description, existingCategories, customPrompt);
         default:
           throw new Error(`Unsupported LLM provider: ${this.provider}. Please configure a valid LLM provider.`);
       }
@@ -33,12 +33,12 @@ class LLMService {
     }
   }
 
-  async classifyWithGroq(message, amount, description, existingCategories) {
+  async classifyWithGroq(message, amount, description, existingCategories, customPrompt = null) {
     if (!this.groqApiKey) {
       throw new Error('Groq API key not configured');
     }
 
-    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories);
+    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories, customPrompt);
     
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -83,12 +83,12 @@ class LLMService {
     return this.parseLLMResponse(data.choices[0].message.content, existingCategories);
   }
 
-  async classifyWithGemini(message, amount, description, existingCategories) {
+  async classifyWithGemini(message, amount, description, existingCategories, customPrompt = null) {
     if (!this.geminiApiKey) {
       throw new Error('Gemini API key not configured');
     }
 
-    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories);
+    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories, customPrompt);
     const fullPrompt = `${systemPrompt}\n\n${userMessage}`;
     
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-pro'}:generateContent?key=${this.geminiApiKey}`, {
@@ -119,12 +119,12 @@ class LLMService {
     return this.parseLLMResponse(generatedText, existingCategories);
   }
 
-  async classifyWithClaude(message, amount, description, existingCategories) {
+  async classifyWithClaude(message, amount, description, existingCategories, customPrompt = null) {
     if (!this.claudeApiKey) {
       throw new Error('Claude API key not configured');
     }
 
-    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories);
+    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories, customPrompt);
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -154,12 +154,12 @@ class LLMService {
     return this.parseLLMResponse(generatedText, existingCategories);
   }
 
-  async classifyWithOpenAI(message, amount, description, existingCategories) {
+  async classifyWithOpenAI(message, amount, description, existingCategories, customPrompt = null) {
     if (!this.openaiApiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
-    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories);
+    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories, customPrompt);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -200,7 +200,7 @@ class LLMService {
     return this.parseLLMResponse(data.choices[0].message.content, existingCategories);
   }
 
-  async classifyWithHuggingFace(message, amount, description, existingCategories) {
+  async classifyWithHuggingFace(message, amount, description, existingCategories, customPrompt = null) {
     if (!this.huggingfaceApiKey) {
       throw new Error('Hugging Face API key not configured');
     }
@@ -235,16 +235,10 @@ class LLMService {
   }
 
 
-  buildClassificationPrompt(message, amount, description, existingCategories) {
-    const categoriesList = existingCategories.length > 0 
-      ? existingCategories.join(', ')
-      : 'No existing categories - suggest new ones as needed';
+  getDefaultPrompt(categoriesList = '{categoriesList}') {
+    return `You are an expert expense categorization assistant. Your job is to classify expenses into the most appropriate category.
 
-    return {
-      systemPrompt: `You are an expert expense categorization assistant. Your job is to classify expenses into the most appropriate category.
-
-${existingCategories.length > 0 
-  ? `Available Categories: ${categoriesList}
+Available Categories: ${categoriesList}
 
 Rules:
 1. Choose the category that best matches the expense description
@@ -257,20 +251,40 @@ Examples:
 - "Coffee $4.50" → {"field": "Food & Dining", "is_new": false} (if exists) or {"field": "Food & Dining", "is_new": true}
 - "Uber ride $15" → {"field": "Transportation", "is_new": false} (if exists) or {"field": "Transportation", "is_new": true}
 - "Dog grooming $80" → {"field": "Pet Care", "is_new": true}
-- "Office supplies $45" → {"field": "Office Supplies", "is_new": true}`
-  : `Rules:
-1. Create appropriate categories for expenses
-2. Use clear, descriptive category names
-3. Consider the amount and context when classifying
-4. Respond with ONLY a JSON object in this exact format: {"field": "Category Name", "is_new": true}
-5. Be consistent with similar expenses
+- "Office supplies $45" → {"field": "Office Supplies", "is_new": true}`;
+  }
 
-Examples:
-- "Coffee $4.50" → {"field": "Food & Dining", "is_new": true}
-- "Uber ride $15" → {"field": "Transportation", "is_new": true}
-- "Dog grooming $80" → {"field": "Pet Care", "is_new": true}
-- "Office supplies $45" → {"field": "Office Supplies", "is_new": true}`}`,
+  // Shared method to inject categories into any prompt
+  injectCategoriesIntoPrompt(prompt, categoriesList) {
+    // Replace {categoriesList} placeholder with actual categories
+    let systemPrompt = prompt.replace('{categoriesList}', categoriesList);
+    
+    // If no placeholder was found, append categories info
+    if (!prompt.includes('{categoriesList}')) {
+      systemPrompt += `\n\nAvailable Categories: ${categoriesList}`;
+    }
+    
+    return systemPrompt;
+  }
 
+  buildClassificationPrompt(message, amount, description, existingCategories, customPrompt = null) {
+    const categoriesList = existingCategories.length > 0 
+      ? existingCategories.join(', ')
+      : 'No existing categories - suggest new ones as needed';
+
+    // Get the base prompt (custom or default)
+    let basePrompt;
+    if (customPrompt) {
+      basePrompt = customPrompt;
+    } else {
+      basePrompt = this.getDefaultPrompt('{categoriesList}');
+    }
+
+    // Inject categories into the prompt
+    const systemPrompt = this.injectCategoriesIntoPrompt(basePrompt, categoriesList);
+
+    return {
+      systemPrompt,
       userMessage: `Classify this expense:
 Message: "${message}"
 Amount: $${amount}

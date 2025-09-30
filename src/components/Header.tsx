@@ -158,26 +158,44 @@ export const Header: React.FC<HeaderProps> = ({
             </Button>
             
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-panel border border-border rounded-lg shadow-custom-xl z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--panel)' }}>
                 <div className="py-1">
                   <button
                     onClick={handleExportClick}
-                    className="w-full px-4 py-2 text-left text-sm text-text hover:bg-bg flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors duration-150 hover:bg-panel-2"
+                    style={{ 
+                      color: 'var(--text)',
+                      backgroundColor: 'transparent'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--panel-2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <Download size={16} />
                     Export Data
                   </button>
                   <button
                     onClick={handleImportClick}
-                    className="w-full px-4 py-2 text-left text-sm text-text hover:bg-bg flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors duration-150 hover:bg-panel-2"
+                    style={{ 
+                      color: 'var(--text)',
+                      backgroundColor: 'transparent'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--panel-2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <Upload size={16} />
                     Import Data
                   </button>
-                  <div className="border-t border-border my-1"></div>
+                  <div className="border-t my-1" style={{ borderColor: 'var(--border)' }}></div>
                   <button
                     onClick={handleThemeToggle}
-                    className="w-full px-4 py-2 text-left text-sm text-text hover:bg-bg flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors duration-150 hover:bg-panel-2"
+                    style={{ 
+                      color: 'var(--text)',
+                      backgroundColor: 'transparent'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--panel-2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
                     {theme === 'light' ? 'Dark Mode' : 'Light Mode'}

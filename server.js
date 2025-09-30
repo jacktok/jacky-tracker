@@ -39,6 +39,18 @@ async function addDefaultCategoriesForUser(userId) {
   console.log(`Added ${defaultCategories.length} default categories for new user ${userId}`);
 }
 
+// Helper function to add default prompt for new users
+async function addDefaultPromptForUser(userId) {
+  const defaultPrompt = 'You are an expert expense categorization assistant. Classify this expense into the most appropriate category based on the description and amount. Consider the context and choose from the available categories: {categoriesList}. Be specific and accurate in your classification. Respond with ONLY a JSON object in this exact format: {"field": "Category Name", "is_new": true/false}';
+  
+  await pool.query(
+    'INSERT INTO user_prompts (user_id, content) VALUES ($1, $2)',
+    [userId, defaultPrompt]
+  );
+  
+  console.log(`Added default prompt for new user ${userId}`);
+}
+
 // CORS configuration
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -109,6 +121,13 @@ async function ensureSchema() {
       note text not null default ''
     );
     
+    create table if not exists user_prompts (
+      user_id uuid primary key references users(id) on delete cascade,
+      content text not null,
+      created_at timestamp with time zone default now(),
+      updated_at timestamp with time zone default now()
+    );
+    
     create table if not exists user_sessions (
       sid varchar not null collate "default",
       sess json not null,
@@ -148,8 +167,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         );
         user = result;
         
-        // Add default categories for new user
+        // Add default categories and prompt for new user
         await addDefaultCategoriesForUser(user.rows[0].id);
+        await addDefaultPromptForUser(user.rows[0].id);
       }
 
       return done(null, user.rows[0]);
@@ -189,8 +209,9 @@ if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
         );
         user = result;
         
-        // Add default categories for new user
+        // Add default categories and prompt for new user
         await addDefaultCategoriesForUser(user.rows[0].id);
+        await addDefaultPromptForUser(user.rows[0].id);
       }
 
       return done(null, user.rows[0]);
@@ -534,7 +555,7 @@ app.delete('/api/categories/:name', authenticateToken, async (req, res) => {
 
 // LLM-based category classification endpoint
 app.post('/api/classify-expense', authenticateToken, async (req, res) => {
-  const { message, amount, description } = req.body || {};
+  const { message, amount, description, promptId } = req.body || {};
   
   if (!message || !amount) {
     return res.status(400).json({ error: 'Message and amount are required' });
@@ -548,13 +569,84 @@ app.post('/api/classify-expense', authenticateToken, async (req, res) => {
     );
     const existingCategories = categoriesResult.rows.map(row => row.name);
     
+    // Get user's custom prompt if exists
+    let customPrompt = null;
+    const promptResult = await pool.query(
+      'SELECT content FROM user_prompts WHERE user_id = $1',
+      [req.user.userId]
+    );
+    if (promptResult.rows.length > 0) {
+      customPrompt = promptResult.rows[0].content;
+    }
+    
     // Use LLM service for classification
-    const result = await llmService.classifyExpense(message, amount, description, existingCategories);
+    const result = await llmService.classifyExpense(message, amount, description, existingCategories, customPrompt);
     
     res.json(result);
   } catch (e) {
     console.error('Classification error:', e);
     res.status(500).json({ error: 'Failed to classify expense' });
+  }
+});
+
+// Get default prompt endpoint
+app.get('/api/default-prompt', (req, res) => {
+  try {
+    const defaultPrompt = llmService.getDefaultPrompt();
+    res.json({ content: defaultPrompt });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// User prompt management endpoints
+app.get('/api/user-prompt', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT content, created_at, updated_at FROM user_prompts WHERE user_id = $1',
+      [req.user.userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No custom prompt found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/user-prompt', authenticateToken, async (req, res) => {
+  const { content } = req.body || {};
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+  
+  try {
+    const result = await pool.query(
+      'INSERT INTO user_prompts (user_id, content) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET content = $2, updated_at = now() RETURNING content, created_at, updated_at',
+      [req.user.userId, content]
+    );
+    
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/user-prompt', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM user_prompts WHERE user_id = $1 RETURNING user_id',
+      [req.user.userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No custom prompt found' });
+    }
+    
+    res.status(204).end();
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

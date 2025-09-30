@@ -32,6 +32,11 @@ export class ApiService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      // Handle 204 No Content responses
+      if (response.status === 204) {
+        return { success: true };
+      }
+
       const data = await response.json();
       return { data, success: true };
     } catch (error) {
@@ -133,7 +138,7 @@ export class ApiService {
   }
 
   // LLM classification endpoint
-  static async classifyExpense(message: string, amount: number, description?: string): Promise<ApiResponse<{
+  static async classifyExpense(message: string, amount: number, description?: string, promptId?: string): Promise<ApiResponse<{
     category: string | null;
     confidence: number;
     description: string;
@@ -146,8 +151,29 @@ export class ApiService {
       isExisting: boolean;
     }>('/api/classify-expense', {
       method: 'POST',
-      body: JSON.stringify({ message, amount, description }),
+      body: JSON.stringify({ message, amount, description, promptId }),
     });
+  }
+
+  // Get default prompt
+  static async getDefaultPrompt(): Promise<ApiResponse<{ content: string }>> {
+    return this.request<{ content: string }>('/api/default-prompt', { method: 'GET' });
+  }
+
+  // User prompt management methods
+  static async getUserPrompt(): Promise<ApiResponse<any>> {
+    return this.request<any>('/api/user-prompt', { method: 'GET' });
+  }
+
+  static async saveUserPrompt(content: string): Promise<ApiResponse<any>> {
+    return this.request<any>('/api/user-prompt', {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  static async deleteUserPrompt(): Promise<ApiResponse<void>> {
+    return this.request<void>('/api/user-prompt', { method: 'DELETE' });
   }
 }
 

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, Plus } from 'lucide-react';
+import { Send, Bot, User, Loader2, Plus, Settings } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { useExpenses } from '../hooks/useExpenses';
 import { useToast } from '../hooks/useToast';
 import { Expense } from '../types';
 import { api } from '../services/api';
+import { UserPromptManagement } from './UserPromptManagement';
 
 interface ChatMessage {
   id: string;
@@ -27,6 +28,8 @@ export const ChatMode: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPromptManagement, setShowPromptManagement] = useState(false);
+  const [hasCustomPrompt, setHasCustomPrompt] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -214,16 +217,45 @@ export const ChatMode: React.FC = () => {
     <div className="max-w-4xl mx-auto h-[calc(100vh-200px)] flex flex-col">
       {/* Chat Header */}
       <div className="bg-card border border-border rounded-t-lg p-4 border-b">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent/80 rounded-lg flex items-center justify-center">
-            <Bot className="w-4 h-4 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent/80 rounded-lg flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-text">Expense Assistant</h2>
+              <p className="text-sm text-text-secondary">Chat with me to add expenses naturally</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-semibold text-text">Expense Assistant</h2>
-            <p className="text-sm text-text-secondary">Chat with me to add expenses naturally</p>
+          <div className="flex items-center gap-3">
+            {/* Current Prompt Display */}
+            <div className="text-sm">
+              <span className="text-text-secondary">Using: </span>
+              <span className="font-medium text-text">
+                {hasCustomPrompt ? 'Custom Prompt' : 'Default Prompt'}
+              </span>
+            </div>
+            <Button
+              onClick={() => setShowPromptManagement(!showPromptManagement)}
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              AI Prompts
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* Prompt Management Section */}
+      {showPromptManagement && (
+        <div className="bg-panel-2 border-x border-border p-4">
+          <UserPromptManagement
+            onPromptChange={setHasCustomPrompt}
+          />
+        </div>
+      )}
 
       {/* Messages Container */}
       <div className="flex-1 bg-bg border-x border-border overflow-y-auto p-4 space-y-4">
