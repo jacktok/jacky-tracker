@@ -248,11 +248,22 @@ Rules:
 5. Be consistent with similar expenses
 6. User living in Thailand consider Thailand merchant
 
+OVERLAPPING CATEGORIES - Choose the most specific one:
+- House loan/mortgage → "Housing" (not Loans)
+- Car loan → "Loans" (not Transportation)
+- Student loan → "Loans" (not Education)
+- Credit card payment → "Loans" (not Shopping)
+- Groceries → "Food & Dining" (not Shopping)
+- Restaurant meal → "Food & Dining" (not Entertainment)
+- Gym membership → "Healthcare" (not Entertainment)
+- Work lunch → "Food & Dining" (not Miscellaneous)
+
 Examples:
-- "Coffee $4.50" → {"field": "Food & Dining", "is_new": false} (if exists) or {"field": "Food & Dining", "is_new": true}
-- "Uber ride $15" → {"field": "Transportation", "is_new": false} (if exists) or {"field": "Transportation", "is_new": true}
-- "Dog grooming $80" → {"field": "Pet Care", "is_new": true}
-- "Office supplies $45" → {"field": "Office Supplies", "is_new": true}`;
+- "Coffee $4.50" → {"field": "Food & Dining", "is_new": false}
+- "House loan payment $1200" → {"field": "Housing", "is_new": false}
+- "Car loan $400" → {"field": "Loans", "is_new": false}
+- "Student loan $300" → {"field": "Loans", "is_new": false}
+- "Grocery shopping $80" → {"field": "Food & Dining", "is_new": false}`;
   }
 
   // Shared method to inject categories into any prompt

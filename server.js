@@ -29,11 +29,17 @@ const __dirname = path.dirname(__filename);
 // Helper function to add default categories for new users
 async function addDefaultCategoriesForUser(userId) {
   const defaultCategories = [
-    'Food & Dining', 'Transportation', 'Shopping', 'Entertainment', 
-    'Healthcare', 'Utilities', 'Groceries', 'Education', 'Travel', 
-    'Insurance', 'Housing', 'Personal Care', 'Subscriptions', 
-    'Savings & Investment', 'Gifts & Donations', 'Pet Care', 
-    'Office Supplies', 'Miscellaneous'
+    'Food & Dining', 
+    'Transportation', 
+    'Shopping', 
+    'Entertainment', 
+    'Healthcare', 
+    'Utilities', 
+    'Housing', 
+    'Loans', 
+    'Personal Care', 
+    'Travel', 
+    'Miscellaneous'
   ];
   
   for (const category of defaultCategories) {
