@@ -142,64 +142,83 @@ export function CategoryManagement({
 
       <div className="bg-card rounded-lg p-4 sm:p-6">
         <h2 className="text-lg sm:text-xl font-semibold text-text mb-3 sm:mb-4">Manage Categories</h2>
-        <div className="space-y-2">
-          {categoryStats.map(({ category, count, totalAmount }) => (
-            <div key={category} className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 bg-bg rounded-lg gap-2 sm:gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                {editingCategory === category ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
-                      className="w-full sm:w-40"
-                      autoFocus
-                    />
-                    <div className="flex gap-1 sm:gap-2">
-                      <Button size="sm" onClick={handleSaveEdit}>
-                        Save
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={handleCancelEdit}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span className="font-medium text-text">{category}</span>
-                    <div className="flex flex-wrap gap-1">
+        
+        {categoryStats.length === 0 ? (
+          <div className="text-center py-8 text-text-muted">
+            No categories found. Add your first category above.
+          </div>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Expenses</th>
+                  <th>Total Amount</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categoryStats.map(({ category, count, totalAmount }) => (
+                  <tr key={category} className="table__row">
+                    <td className="table__cell">
+                      {editingCategory === category ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
+                            className="w-full max-w-xs"
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <span className="font-medium text-text">{category}</span>
+                      )}
+                    </td>
+                    <td className="table__cell">
                       <Badge variant="secondary">
-                        {count} expenses
+                        {count} {count === 1 ? 'expense' : 'expenses'}
                       </Badge>
-                      <Badge variant="outline">
-                        ${totalAmount.toFixed(2)}
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {editingCategory !== category && (
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleStartEdit(category)}
-                  >
-                    Rename
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDeleteClick(category)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                    </td>
+                    <td className="table__cell">
+                      <span className="font-mono text-text">${totalAmount.toFixed(2)}</span>
+                    </td>
+                    <td className="table__cell table__cell--actions">
+                      {editingCategory === category ? (
+                        <div className="table-actions">
+                          <Button size="sm" onClick={handleSaveEdit}>
+                            Save
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={handleCancelEdit}>
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="table-actions">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleStartEdit(category)}
+                          >
+                            Rename
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteClick(category)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}

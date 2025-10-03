@@ -246,6 +246,7 @@ Rules:
 3. If no existing category fits well, suggest a new category
 4. Respond with ONLY a JSON object in this exact format: {"field": "Category Name", "is_new": true/false}
 5. Be consistent with similar expenses
+6. User living in Thailand consider Thailand merchant
 
 Examples:
 - "Coffee $4.50" → {"field": "Food & Dining", "is_new": false} (if exists) or {"field": "Food & Dining", "is_new": true}

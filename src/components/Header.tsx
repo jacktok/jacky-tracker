@@ -234,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="sm:hidden bg-card border-b border-border px-2 py-3 space-y-3">
+        <div className="sm:hidden bg-card border-b border-border px-2 py-3 space-y-3 sticky top-[60px] sm:top-[72px] z-40 backdrop-blur-sm">
           {/* Mobile Navigation */}
           {onTabChange && (
             <div className="space-y-2">
