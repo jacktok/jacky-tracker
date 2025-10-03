@@ -13,6 +13,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Build the frontend
+RUN npm run build
+
 # Rebuild native modules for Alpine Linux
 RUN npm rebuild bcrypt --build-from-source
 

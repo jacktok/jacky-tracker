@@ -6,8 +6,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "start": "node server.js",
+    "start": "npm run build && node server.js",
     "server": "nodemon server.js",
+    "dev:server": "npm run build && nodemon server.js",
     "type-check": "tsc --noEmit"
   },
   "keywords": [],

@@ -13,12 +13,18 @@ import bcrypt from 'bcrypt';
 import { Pool } from 'pg';
 import connectPgSimple from 'connect-pg-simple';
 import LLMService from './llm-service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 const pgSession = connectPgSimple(session);
 
 const app = express();
 const llmService = new LLMService();
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Helper function to add default categories for new users
 async function addDefaultCategoriesForUser(userId) {
@@ -54,11 +60,14 @@ async function addDefaultPromptForUser(userId) {
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
   credentials: true
 }));
 
 app.use(express.json());
+
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // Session configuration
 app.use(session({
@@ -290,7 +299,7 @@ app.get('/api/test/line-config', (req, res) => {
     hasChannelSecret: !!process.env.LINE_CHANNEL_SECRET,
     channelId: process.env.LINE_CHANNEL_ID,
     callbackUrl: process.env.LINE_CALLBACK_URL || "/api/auth/line/callback",
-    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3001',
     lineLoginInitialized: !!lineLogin
   };
   res.json(config);
@@ -384,7 +393,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             ]
           );
           
-          res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?linked=google`);
+          res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?linked=google`);
           return;
         }
         
@@ -399,10 +408,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           { expiresIn: '30d' }
         );
         
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${token}`);
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}?token=${token}`);
       } catch (error) {
         console.error('Google callback error:', error);
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=google`);
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?error=google`);
       }
     }
   );
@@ -456,7 +465,7 @@ if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
       // Verify state parameter
       if (!state || state !== req.session.lineState) {
         console.error('LINE OAuth: Invalid state parameter');
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?error=line_oauth_failed`);
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?error=line_oauth_failed`);
       }
       
       // Exchange code for token
@@ -516,7 +525,7 @@ if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
         const existingUser = await pool.query('SELECT * FROM users WHERE id = $1', [linkingUserId]);
         user = existingUser.rows[0];
         
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?linked=line`);
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?linked=line`);
         return;
       } else {
         // Create new user and link LINE account
@@ -578,10 +587,10 @@ if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
         { expiresIn: '30d' }
       );
       
-      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${token}`);
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}?token=${token}`);
     } catch (error) {
       console.error('LINE callback error:', error);
-      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?error=line_oauth_failed`);
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?error=line_oauth_failed`);
     }
   });
 }
@@ -1070,6 +1079,11 @@ if (lineBotService) {
   
   console.log('LINE Bot webhook endpoint enabled at /api/line/webhook');
 }
+
+// Catch-all handler: send back React's index.html file for client-side routing
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
 const port = process.env.PORT || 3001;
 ensureSchema().then(() => {

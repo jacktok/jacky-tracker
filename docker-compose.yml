@@ -17,13 +17,14 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
+  app:
     build: .
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/jacky_tracker
       PORT: 3001
       PGSSL: "false"
+      FRONTEND_URL: http://localhost:3001
     depends_on:
       db:
         condition: service_healthy
