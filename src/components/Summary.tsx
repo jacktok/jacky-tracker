@@ -545,3 +545,5 @@ export function Summary({ expenses }: SummaryProps) {
     </div>
   );
 }
+
+export default Summary;

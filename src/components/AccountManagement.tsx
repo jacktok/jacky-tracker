@@ -291,3 +291,5 @@ export const AccountManagement: React.FC = () => {
     </div>
   );
 };
+
+export default AccountManagement;

@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { Dashboard } from './components/Dashboard';
-import { CategoryManagement } from './components/CategoryManagement';
-import { Summary } from './components/Summary';
-import { ChatMode } from './components/ChatMode';
-import { AccountManagement } from './components/AccountManagement';
 import { Header } from './components/Header';
 import { useExpenses } from './hooks/useExpenses';
 import { useToast } from './hooks/useToast';
+
+// Lazy load components for code splitting
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const CategoryManagement = lazy(() => import('./components/CategoryManagement'));
+const Summary = lazy(() => import('./components/Summary'));
+const ChatMode = lazy(() => import('./components/ChatMode'));
+const AccountManagement = lazy(() => import('./components/AccountManagement'));
 
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'categories' | 'summary' | 'chat' | 'settings'>('dashboard');
@@ -161,23 +163,29 @@ function App() {
 
         {/* Main Content */}
         <div className="container">
-          {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'categories' && (
-            <CategoryManagement
-              categories={categories}
-              expenses={expenses}
-              onAddCategory={handleAddCategory}
-              onDeleteCategory={handleDeleteCategory}
-              onRenameCategory={handleRenameCategory}
-            />
-          )}
-          {activeTab === 'summary' && (
-            <Summary
-              expenses={expenses}
-            />
-          )}
-          {activeTab === 'chat' && <ChatMode />}
-          {activeTab === 'settings' && <AccountManagement />}
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+            </div>
+          }>
+            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'categories' && (
+              <CategoryManagement
+                categories={categories}
+                expenses={expenses}
+                onAddCategory={handleAddCategory}
+                onDeleteCategory={handleDeleteCategory}
+                onRenameCategory={handleRenameCategory}
+              />
+            )}
+            {activeTab === 'summary' && (
+              <Summary
+                expenses={expenses}
+              />
+            )}
+            {activeTab === 'chat' && <ChatMode />}
+            {activeTab === 'settings' && <AccountManagement />}
+          </Suspense>
         </div>
       </div>
     </ProtectedRoute>

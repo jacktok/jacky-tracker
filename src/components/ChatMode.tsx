@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Plus, Settings } from 'lucide-react';
 import { Button } from './ui/Button';
-import { Input } from './ui/Input';
 import { useExpenses } from '../hooks/useExpenses';
 import { useToast } from '../hooks/useToast';
 import { Expense } from '../types';
@@ -362,3 +361,5 @@ export const ChatMode: React.FC = () => {
     </div>
   );
 };
+
+export default ChatMode;
