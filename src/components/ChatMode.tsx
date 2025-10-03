@@ -61,7 +61,7 @@ export const ChatMode: React.FC = () => {
       setMessages([{
         id: '1',
         type: 'bot',
-        content: "Hi! I'm your expense tracking assistant. You can tell me about your expenses in natural language, and I'll help categorize them. For example, try saying 'I spent $25 on lunch today' or 'Coffee $4.50 at Starbucks'.",
+        content: "Hi! Tell me about your expenses and I'll categorize them.",
         timestamp: new Date()
       }]);
     }
@@ -330,8 +330,8 @@ export const ChatMode: React.FC = () => {
 
       {/* Input Area */}
       <div className="bg-card border border-border rounded-b-lg border-t">
-        {/* Mobile Layout - Full Width Input */}
-        <div className="flex gap-2 p-3 sm:p-4 pb-2 sm:hidden">
+        {/* Responsive Input Layout */}
+        <div className="flex gap-2 p-3 sm:p-4 pb-2">
           <input
             ref={inputRef}
             value={inputValue}
@@ -344,31 +344,7 @@ export const ChatMode: React.FC = () => {
           <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isProcessing}
-            className="px-3 py-3 flex-shrink-0 min-h-[48px] min-w-[48px]"
-          >
-            {isProcessing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
-        
-        {/* Desktop Layout - Original Input Component */}
-        <div className="hidden sm:flex gap-2 p-4 pb-2">
-          <Input
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Tell me about your expense... (e.g., 'I spent $25 on lunch today')"
-            disabled={isProcessing}
-            className="flex-1"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isProcessing}
-            className="px-4 flex-shrink-0"
+            className="px-3 sm:px-4 py-3 flex-shrink-0 min-h-[48px] min-w-[48px] sm:min-w-auto"
           >
             {isProcessing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
