@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Upload, Download, Menu, X, Settings, BarChart3, Tag, PieChart, MessageCircle, User } from 'lucide-react';
+import { Moon, Sun, Upload, Download, Menu, X, BarChart3, Tag, PieChart, MessageCircle, User } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AuthButton } from './AuthButton';
 
@@ -21,9 +21,10 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNavDropdownOpen, setIsNavDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const navDropdownRef = useRef<HTMLDivElement>(null);
+  const unifiedMenuRef = useRef<HTMLDivElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -36,46 +37,59 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
-    setIsDropdownOpen(false);
     setIsMobileMenuOpen(false);
+    setIsNavDropdownOpen(false);
   };
 
   const handleExportClick = () => {
     onExport();
-    setIsDropdownOpen(false);
     setIsMobileMenuOpen(false);
+    setIsNavDropdownOpen(false);
   };
 
   const handleThemeToggle = () => {
     onToggleTheme();
     setIsMobileMenuOpen(false);
+    setIsNavDropdownOpen(false);
   };
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  const toggleUnifiedMenu = () => {
+    // For mobile screens, toggle mobile menu
+    if (window.innerWidth < 768) {
+      setIsMobileMenuOpen(!isMobileMenuOpen);
+      setIsNavDropdownOpen(false);
+    } else {
+      // For medium screens, toggle nav dropdown
+      setIsNavDropdownOpen(!isNavDropdownOpen);
+      setIsMobileMenuOpen(false);
+    }
   };
 
   const handleTabClick = (tab: 'dashboard' | 'categories' | 'summary' | 'chat' | 'settings') => {
     onTabChange?.(tab);
     setIsMobileMenuOpen(false);
+    setIsNavDropdownOpen(false);
   };
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
+      const target = event.target as Node;
+      if (navDropdownRef.current && !navDropdownRef.current.contains(target) &&
+          unifiedMenuRef.current && !unifiedMenuRef.current.contains(target)) {
+        setIsNavDropdownOpen(false);
+        setIsMobileMenuOpen(false);
       }
     };
 
-    if (isDropdownOpen) {
+    if (isNavDropdownOpen || isMobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isDropdownOpen]);
+  }, [isNavDropdownOpen, isMobileMenuOpen]);
 
   return (
     <>
@@ -93,148 +107,93 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-1">
           {onTabChange && (
-            <div className="flex bg-bg rounded-lg p-1 mr-4">
-              <button
-                onClick={() => handleTabClick('dashboard')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'dashboard'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
-                }`}
-              >
-                <BarChart3 size={16} className="inline mr-1.5" />
-                Dashboard
-              </button>
-              <button
-                onClick={() => handleTabClick('categories')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'categories'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
-                }`}
-              >
-                <Tag size={16} className="inline mr-1.5" />
-                Categories
-              </button>
-              <button
-                onClick={() => handleTabClick('summary')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'summary'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
-                }`}
-              >
-                <PieChart size={16} className="inline mr-1.5" />
-                Summary
-              </button>
-              <button
-                onClick={() => handleTabClick('chat')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'chat'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
-                }`}
-              >
-                <MessageCircle size={16} className="inline mr-1.5" />
-                Chat
-              </button>
-              <button
-                onClick={() => handleTabClick('settings')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'settings'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-text-secondary hover:text-text hover:bg-bg/50'
-                }`}
-              >
-                <User size={16} className="inline mr-1.5" />
-                Settings
-              </button>
-            </div>
+            <>
+              {/* Full Navigation - Large Screens */}
+              <div className="hidden xl:flex bg-bg rounded-lg p-1 mr-4">
+                <button
+                  onClick={() => handleTabClick('dashboard')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === 'dashboard'
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                  }`}
+                >
+                  <BarChart3 size={16} className="inline mr-1.5" />
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => handleTabClick('categories')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === 'categories'
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                  }`}
+                >
+                  <Tag size={16} className="inline mr-1.5" />
+                  Categories
+                </button>
+                <button
+                  onClick={() => handleTabClick('summary')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === 'summary'
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                  }`}
+                >
+                  <PieChart size={16} className="inline mr-1.5" />
+                  Summary
+                </button>
+                <button
+                  onClick={() => handleTabClick('chat')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === 'chat'
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                  }`}
+                >
+                  <MessageCircle size={16} className="inline mr-1.5" />
+                  Chat
+                </button>
+                <button
+                  onClick={() => handleTabClick('settings')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === 'settings'
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text hover:bg-bg/50'
+                  }`}
+                >
+                  <User size={16} className="inline mr-1.5" />
+                  Settings
+                </button>
+              </div>
+
+            </>
           )}
         </div>
 
         {/* Desktop Actions */}
-        <div className="hidden sm:flex items-center gap-2">
-          {/* Dropdown Menu */}
-          <div className="relative" ref={dropdownRef}>
-            <Button
-              variant="secondary"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2"
-            >
-              <Settings size={16} />
-              <span className="hidden md:inline">Tools</span>
-            </Button>
-            
-            {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-panel border border-border rounded-lg shadow-custom-xl z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--panel)' }}>
-                <div className="py-1">
-                  <button
-                    onClick={handleExportClick}
-                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors duration-150 hover:bg-panel-2"
-                    style={{ 
-                      color: 'var(--text)',
-                      backgroundColor: 'transparent'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--panel-2)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <Download size={16} />
-                    Export Data
-                  </button>
-                  <button
-                    onClick={handleImportClick}
-                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors duration-150 hover:bg-panel-2"
-                    style={{ 
-                      color: 'var(--text)',
-                      backgroundColor: 'transparent'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--panel-2)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <Upload size={16} />
-                    Import Data
-                  </button>
-                  <div className="border-t my-1" style={{ borderColor: 'var(--border)' }}></div>
-                  <button
-                    onClick={handleThemeToggle}
-                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors duration-150 hover:bg-panel-2"
-                    style={{ 
-                      color: 'var(--text)',
-                      backgroundColor: 'transparent'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--panel-2)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-                    {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
+        <div className="hidden xl:flex items-center gap-2">
           <AuthButton />
         </div>
 
-        {/* Mobile Menu Button */}
-        <div className="flex sm:hidden items-center gap-2">
+        {/* Mobile and Medium Actions */}
+        <div className="flex xl:hidden items-center gap-2">
           <AuthButton />
           <Button
             variant="icon"
-            onClick={toggleMobileMenu}
+            onClick={toggleUnifiedMenu}
             className="p-2"
           >
-            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {(isMobileMenuOpen || isNavDropdownOpen) ? <X size={20} /> : <Menu size={20} />}
           </Button>
         </div>
       </header>
 
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="sm:hidden bg-card border-b border-border px-2 py-3 space-y-3 sticky top-[60px] sm:top-[72px] z-40 backdrop-blur-sm">
+      {/* Unified Menu - Medium and Mobile Screens */}
+      {(isMobileMenuOpen || isNavDropdownOpen) && (
+        <div ref={unifiedMenuRef} className="xl:hidden bg-card border-b border-border px-2 py-3 space-y-3 sticky top-[60px] sm:top-[72px] z-40 backdrop-blur-sm">
           {/* Mobile Navigation */}
           {onTabChange && (
             <div className="space-y-2">
