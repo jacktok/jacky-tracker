@@ -123,9 +123,9 @@ export function CategoryManagement({
   const availableCategories = categories.filter(cat => cat !== deleteConfirm);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-card rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-text mb-4">Add New Category</h2>
+    <div className="space-y-3 sm:space-y-4">
+      <div className="bg-card rounded-lg p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-text mb-3 sm:mb-4">Add New Category</h2>
         <div className="flex gap-2">
           <Input
             value={newCategory}
@@ -140,43 +140,47 @@ export function CategoryManagement({
         </div>
       </div>
 
-      <div className="bg-card rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-text mb-4">Manage Categories</h2>
-        <div className="space-y-3">
+      <div className="bg-card rounded-lg p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-text mb-3 sm:mb-4">Manage Categories</h2>
+        <div className="space-y-2">
           {categoryStats.map(({ category, count, totalAmount }) => (
-            <div key={category} className="flex items-center justify-between p-3 bg-bg rounded-lg">
-              <div className="flex items-center gap-3">
+            <div key={category} className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 bg-bg rounded-lg gap-2 sm:gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 {editingCategory === category ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <Input
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
-                      className="w-40"
+                      className="w-full sm:w-40"
                       autoFocus
                     />
-                    <Button size="sm" onClick={handleSaveEdit}>
-                      Save
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
+                    <div className="flex gap-1 sm:gap-2">
+                      <Button size="sm" onClick={handleSaveEdit}>
+                        Save
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span className="font-medium text-text">{category}</span>
-                    <Badge variant="secondary">
-                      {count} expenses
-                    </Badge>
-                    <Badge variant="outline">
-                      ${totalAmount.toFixed(2)}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="secondary">
+                        {count} expenses
+                      </Badge>
+                      <Badge variant="outline">
+                        ${totalAmount.toFixed(2)}
+                      </Badge>
+                    </div>
                   </div>
                 )}
               </div>
               
               {editingCategory !== category && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <Button
                     size="sm"
                     variant="secondary"
@@ -201,16 +205,16 @@ export function CategoryManagement({
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-text mb-4">
+          <div className="bg-card rounded-lg p-4 sm:p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4">
               Delete Category "{deleteConfirm}"
             </h3>
-            <p className="text-text-secondary mb-4">
+            <p className="text-text-secondary mb-3 sm:mb-4">
               This category has {expenses.filter(exp => exp.category === deleteConfirm).length} expenses. 
               Where would you like to migrate them to?
             </p>
             
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <Select
                 value={migrateTo}
                 onChange={(e) => setMigrateTo(e.target.value)}

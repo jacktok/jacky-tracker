@@ -31,7 +31,7 @@ export const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({
         {sortedCategories.map(([category, amount]) => (
           <div key={category} className="breakdown__item">
             <div className="breakdown__row">
-              <span>{category}</span>
+              <span className="text-sm font-medium text-text-secondary truncate">{category}</span>
               <span className="breakdown__value font-mono">
                 <span className="hidden sm:inline">{formatCurrency(amount, true)}</span>
                 <span className="sm:hidden">{formatCurrency(amount, false)}</span>

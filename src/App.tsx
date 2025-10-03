@@ -160,7 +160,7 @@ function App() {
         />
 
         {/* Main Content */}
-        <div className="container py-6">
+        <div className="container">
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'categories' && (
             <CategoryManagement

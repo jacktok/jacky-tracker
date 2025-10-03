@@ -82,36 +82,34 @@ export function Dashboard() {
   }
 
   return (
-    <div>
-      <main className="container">
-        <SummaryCards
-          totalFiltered={totalFiltered}
-          totalThisMonth={totalThisMonth}
-          entryCount={expenses.length}
-        />
-        
-        <ExpenseForm
-          categories={categories}
-          onAddExpense={handleAddExpense}
-          onAddCategory={addCategory}
-          isLoading={isLoading}
-        />
-        
-        <Filters
-          filters={filters}
-          categories={categories}
-          onFiltersChange={updateFilters}
-        />
-        
-        <ExpenseTable
-          expenses={filteredExpenses}
-          categories={categories}
-          onUpdateExpense={handleUpdateExpense}
-          onDeleteExpense={handleDeleteExpense}
-        />
-        
-        <CategoryBreakdown breakdown={categoryBreakdown} />
-      </main>
+    <div className="space-y-4 sm:space-y-6">
+      <SummaryCards
+        totalFiltered={totalFiltered}
+        totalThisMonth={totalThisMonth}
+        entryCount={expenses.length}
+      />
+      
+      <ExpenseForm
+        categories={categories}
+        onAddExpense={handleAddExpense}
+        onAddCategory={addCategory}
+        isLoading={isLoading}
+      />
+      
+      <Filters
+        filters={filters}
+        categories={categories}
+        onFiltersChange={updateFilters}
+      />
+      
+      <ExpenseTable
+        expenses={filteredExpenses}
+        categories={categories}
+        onUpdateExpense={handleUpdateExpense}
+        onDeleteExpense={handleDeleteExpense}
+      />
+      
+      <CategoryBreakdown breakdown={categoryBreakdown} />
       
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

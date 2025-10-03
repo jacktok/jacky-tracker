@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="bg-card border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-sm">
+      <header className="bg-card border-b border-border px-2 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-sm">
         {/* Logo and Title */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -234,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="sm:hidden bg-card border-b border-border px-4 py-3 space-y-3">
+        <div className="sm:hidden bg-card border-b border-border px-2 py-3 space-y-3">
           {/* Mobile Navigation */}
           {onTabChange && (
             <div className="space-y-2">

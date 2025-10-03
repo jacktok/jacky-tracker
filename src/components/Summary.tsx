@@ -72,8 +72,8 @@ function SummaryCard({ title, value, change, changeType = 'neutral', icon, descr
   };
 
   return (
-    <div className="bg-card rounded-lg p-6 border border-border">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-accent/10 rounded-lg text-accent">
             {icon}
@@ -231,9 +231,9 @@ export function Summary({ expenses }: SummaryProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <SummaryCard
           title="This Month"
           value={formatCurrency(summaryData.currentMonthTotal)}
@@ -266,12 +266,12 @@ export function Summary({ expenses }: SummaryProps) {
       </div>
 
       {/* Spending Insights */}
-      <div className="bg-card rounded-lg p-6 border border-border">
-        <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+      <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
+        <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4 flex items-center gap-2">
           <Target size={20} className="text-accent" />
           Spending Insights
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="flex items-center justify-between p-4 bg-bg rounded-lg">
             <div className="flex items-center gap-3">
               <TrendingUp size={20} className="text-green-500" />
@@ -319,10 +319,10 @@ export function Summary({ expenses }: SummaryProps) {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Monthly Spending Trend */}
-        <div className="bg-card rounded-lg p-6 border border-border">
-          <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+        <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
+          <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4 flex items-center gap-2">
             <BarChart3 size={20} className="text-accent" />
             Monthly Spending Trend
           </h3>
@@ -389,8 +389,8 @@ export function Summary({ expenses }: SummaryProps) {
         </div>
 
         {/* Weekly Spending */}
-        <div className="bg-card rounded-lg p-6 border border-border">
-          <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+        <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
+          <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4 flex items-center gap-2">
             <BarChart3 size={20} className="text-accent" />
             Weekly Spending
           </h3>
@@ -453,12 +453,12 @@ export function Summary({ expenses }: SummaryProps) {
       </div>
 
       {/* Category Distribution */}
-      <div className="bg-card rounded-lg p-6 border border-border">
-        <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+      <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
+        <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4 flex items-center gap-2">
           <PieChart size={20} className="text-accent" />
           Category Distribution
         </h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div className="h-64 flex items-center justify-center">
             <Doughnut
               data={{
