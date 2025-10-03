@@ -14,7 +14,7 @@ interface LinkedAccount {
 }
 
 export const AccountManagement: React.FC = () => {
-  const { user } = useAuth();
+  const { user, linkAccount } = useAuth();
   const { showSuccess, showError } = useToast();
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,18 +63,10 @@ export const AccountManagement: React.FC = () => {
     setIsLinking(provider);
     
     try {
-      // First, call an endpoint to prepare for linking
-      const response = await api.post(`/api/auth/${provider}/prepare-link`);
-      if (response.success) {
-        // Redirect to the linking endpoint
-        window.location.href = `/api/auth/${provider}/link`;
-      } else {
-        showError(`Failed to prepare ${provider} linking`);
-        setIsLinking(null);
-      }
+      await linkAccount(provider);
     } catch (error: any) {
-      console.error('Failed to prepare linking:', error);
-      showError(`Failed to prepare ${provider} linking`);
+      console.error('Failed to link account:', error);
+      showError(`Failed to link ${provider} account`);
       setIsLinking(null);
     }
   };

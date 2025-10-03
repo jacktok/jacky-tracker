@@ -91,9 +91,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     window.location.href = `/api/auth/${provider}`;
   };
 
-  const linkAccount = (provider: 'google' | 'line') => {
-    // Redirect to OAuth provider linking endpoint
-    window.location.href = `/api/auth/${provider}/link`;
+  const linkAccount = async (provider: 'google' | 'line') => {
+    try {
+      // First, call the prepare-link endpoint to set up the session
+      const response = await api.post(`/api/auth/${provider}/prepare-link`);
+      if (response.success) {
+        // Then redirect to the linking endpoint
+        window.location.href = `/api/auth/${provider}/link`;
+      } else {
+        console.error(`Failed to prepare ${provider} linking:`, response.error);
+      }
+    } catch (error) {
+      console.error(`Failed to prepare ${provider} linking:`, error);
+    }
   };
 
   const loadLinkedAccounts = async () => {
