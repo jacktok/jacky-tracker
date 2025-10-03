@@ -169,8 +169,11 @@ async function ensureSchema() {
   `);
 }
 
-// Passport strategies - only enable if credentials are provided
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+// Passport strategies - only enable if credentials are provided and login is enabled
+const enableGoogleLogin = process.env.ENABLE_GOOGLE_LOGIN?.toLowerCase() !== 'false' && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
+const enableLineLogin = process.env.ENABLE_LINE_LOGIN?.toLowerCase() !== 'false' && process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET;
+
+if (enableGoogleLogin) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -262,12 +265,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   }));
   console.log('Google OAuth strategy enabled');
 } else {
-  console.log('Google OAuth disabled - missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
+  if (process.env.ENABLE_GOOGLE_LOGIN?.toLowerCase() === 'false') {
+    console.log('Google OAuth disabled - ENABLE_GOOGLE_LOGIN is set to false');
+  } else {
+    console.log('Google OAuth disabled - missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
+  }
 }
 
 // Initialize LINE Login v2
 let lineLogin = null;
-if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
+if (enableLineLogin) {
   console.log('LINE Login v2 Configuration:');
   console.log('- Channel ID:', process.env.LINE_CHANNEL_ID);
   console.log('- Channel Secret:', process.env.LINE_CHANNEL_SECRET ? '***hidden***' : 'NOT SET');
@@ -281,7 +288,11 @@ if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
   
   console.log('LINE Login v2 strategy enabled');
 } else {
-  console.log('LINE OAuth disabled - missing LINE_CHANNEL_ID or LINE_CHANNEL_SECRET');
+  if (process.env.ENABLE_LINE_LOGIN?.toLowerCase() === 'false') {
+    console.log('LINE OAuth disabled - ENABLE_LINE_LOGIN is set to false');
+  } else {
+    console.log('LINE OAuth disabled - missing LINE_CHANNEL_ID or LINE_CHANNEL_SECRET');
+  }
 }
 
 // LINE Bot Configuration
@@ -353,8 +364,16 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Auth configuration endpoint
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    googleLogin: enableGoogleLogin,
+    lineLogin: enableLineLogin
+  });
+});
+
 // Auth routes - only register if strategies are enabled
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+if (enableGoogleLogin) {
   app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
   
   // Prepare for linking Google account
@@ -423,7 +442,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-if (process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET) {
+if (enableLineLogin) {
   // LINE Login v2 routes
   app.get('/api/auth/line', (req, res) => {
     if (!lineLogin) {
