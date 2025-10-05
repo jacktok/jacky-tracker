@@ -67,7 +67,10 @@ export const ChatMode: React.FC = () => {
   const extractExpenseData = async (message: string) => {
     try {
       // Get user's current date (client-side timezone)
-      const userDate = new Date().toISOString();
+      const now = new Date();
+      const userDate = now.getFullYear() + '-' + 
+        String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(now.getDate()).padStart(2, '0');
       const response = await api.extractExpense(message, userDate);
       
       if (response.success && response.data) {
