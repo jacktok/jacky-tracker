@@ -186,6 +186,22 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Desktop Actions */}
         <div className="hidden xl:flex items-center gap-2">
+          <Button
+            variant="icon"
+            onClick={handleExportClick}
+            className="p-2"
+            title={t('actions.exportData')}
+          >
+            <Download size={20} />
+          </Button>
+          <Button
+            variant="icon"
+            onClick={handleImportClick}
+            className="p-2"
+            title={t('actions.importData')}
+          >
+            <Upload size={20} />
+          </Button>
           <LanguageSwitcher />
           <AuthButton />
         </div>
@@ -205,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Unified Menu - Medium and Mobile Screens */}
       {(isMobileMenuOpen || isNavDropdownOpen) && (
-        <div ref={unifiedMenuRef} className="xl:hidden bg-card border-b border-border px-2 py-3 space-y-3 sticky top-[60px] sm:top-[72px] z-40 backdrop-blur-sm">
+        <div ref={unifiedMenuRef} className="xl:hidden bg-card/98 border-b border-border px-2 py-3 space-y-3 sticky top-[60px] sm:top-[72px] z-40 backdrop-blur-lg shadow-lg">
           {/* Mobile Navigation */}
           {onTabChange && (
             <div className="space-y-2">
