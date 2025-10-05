@@ -30,6 +30,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,16 +42,26 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
     }
 
     setErrors([]);
-    await onAddExpense(formData);
+    setIsSuccess(false);
     
-    // Reset form
-    setFormData({
-      date: new Date().toISOString().slice(0, 10),
-      amount: 0,
-      category: '',
-      note: ''
-    });
-    setSelectedCategory('');
+    try {
+      await onAddExpense(formData);
+      setIsSuccess(true);
+      
+      // Reset form after successful submission
+      setTimeout(() => {
+        setFormData({
+          date: new Date().toISOString().slice(0, 10),
+          amount: 0,
+          category: '',
+          note: ''
+        });
+        setSelectedCategory('');
+        setIsSuccess(false);
+      }, 1500); // Show success state for 1.5 seconds
+    } catch (error) {
+      // Error handling is done in the parent component
+    }
   };
 
   const handleCategorySelect = (category: string) => {
@@ -199,9 +210,10 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
           <Button
             type="submit"
             loading={isLoading}
-            disabled={!formData.category}
+            disabled={!formData.category || isSuccess}
+            className={isSuccess ? "bg-success border-success text-white" : ""}
           >
-            💾 Add Expense
+            {isSuccess ? "✅ Added!" : "💾 Add Expense"}
           </Button>
           <Button
             type="button"

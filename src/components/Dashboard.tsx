@@ -28,7 +28,7 @@ export function Dashboard() {
     updateFilters
   } = useExpenses();
 
-  const { toasts, removeToast, showSuccess, showError } = useToast();
+  const { toasts, removeToast, showSuccess, showError, addToast } = useToast();
 
   // Calculate filtered and sorted expenses
   const filteredExpenses = sortExpenses(
@@ -45,11 +45,12 @@ export function Dashboard() {
   const handleAddExpense = useCallback(async (data: ExpenseFormData) => {
     try {
       await addExpense(data);
-      showSuccess('Expense added successfully');
+      // Show success toast for 4 seconds to ensure mobile users see it
+      addToast(`✅ Expense added: ${data.category} - $${data.amount.toFixed(2)}`, 'success', 4000);
     } catch (error) {
       showError('Failed to add expense');
     }
-  }, [addExpense, showSuccess, showError]);
+  }, [addExpense, addToast, showError]);
 
   const handleDeleteExpense = useCallback(async (id: string) => {
     try {
