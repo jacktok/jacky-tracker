@@ -18,11 +18,6 @@ interface ChatMessage {
   isProcessing?: boolean;
 }
 
-interface CategorySuggestion {
-  category: string;
-  confidence: number;
-  description?: string;
-}
 
 export const ChatMode: React.FC = () => {
   const { t } = useTranslation();
@@ -68,39 +63,22 @@ export const ChatMode: React.FC = () => {
     }
   }, [t]);
 
-  const classifyExpense = async (message: string, amount: number, description: string): Promise<CategorySuggestion | null> => {
+
+  const extractExpenseData = async (message: string) => {
     try {
-      const response = await api.classifyExpense(message, amount, description);
+      // Get user's current date (client-side timezone)
+      const userDate = new Date().toISOString();
+      const response = await api.extractExpense(message, userDate);
       
       if (response.success && response.data) {
-        if (response.data.category) {
-          return {
-            category: response.data.category,
-            confidence: response.data.confidence,
-            description: response.data.description
-          };
-        }
+        return response.data;
       }
       
       return null;
     } catch (error) {
-      console.error('Error classifying expense:', error);
+      console.error('Error extracting expense data:', error);
       return null;
     }
-  };
-
-  const extractExpenseData = (message: string): { amount: number; description: string } | null => {
-    // Simple regex to extract amount and description
-    const amountRegex = /\$?(\d+(?:\.\d{2})?)/;
-    const match = message.match(amountRegex);
-    
-    if (match) {
-      const amount = parseFloat(match[1]);
-      const description = message.replace(amountRegex, '').trim();
-      return { amount, description: description || 'Expense' };
-    }
-    
-    return null;
   };
 
   const handleSendMessage = async () => {
@@ -129,10 +107,10 @@ export const ChatMode: React.FC = () => {
     setMessages(prev => [...prev, processingMessage]);
 
     try {
-      // Extract expense data
-      const expenseData = extractExpenseData(inputValue);
+      // Extract expense data using LLM
+      const extractedData = await extractExpenseData(inputValue);
       
-      if (!expenseData) {
+      if (!extractedData) {
         setMessages(prev => prev.slice(0, -1).concat([{
           id: (Date.now() + 1).toString(),
           type: 'bot',
@@ -143,58 +121,49 @@ export const ChatMode: React.FC = () => {
         return;
       }
 
-      // Classify the expense
-      const suggestion = await classifyExpense(inputValue, expenseData.amount, expenseData.description);
-      
-      if (suggestion) {
-        // Check if category exists, if not, create it
-        let categoryName = suggestion.category;
-        if (!categories.includes(categoryName)) {
-          try {
-            await addCategory(categoryName);
-            showSuccess(t('chatMode.categoryCreated', { category: categoryName }));
-          } catch (error) {
-            console.error('Failed to create category:', error);
-          }
-        }
-
-        // Create the expense
-        const newExpense: Omit<Expense, 'id'> = {
-          date: new Date().toISOString().split('T')[0],
-          amount: expenseData.amount,
-          category: categoryName,
-          note: expenseData.description
-        };
-
+      // Check if category exists, if not, create it
+      let categoryName = extractedData.category;
+      if (extractedData.isNewCategory && !categories.includes(categoryName)) {
         try {
-          await addExpense(newExpense);
-          
-          setMessages(prev => prev.slice(0, -1).concat([{
-            id: (Date.now() + 1).toString(),
-            type: 'bot',
-            content: `✅ ${t('chatMode.expenseAdded', { description: expenseData.description, amount: expenseData.amount, category: categoryName })} ${suggestion.description ? `(${suggestion.description})` : ''}`,
-            timestamp: new Date(),
-            expense: { ...newExpense, id: Date.now().toString() } as Expense
-          }]));
-          
-          showSuccess(t('messages.expenseAdded'));
+          await addCategory(categoryName);
+          showSuccess(t('chatMode.categoryCreated', { category: categoryName }));
         } catch (error) {
-          setMessages(prev => prev.slice(0, -1).concat([{
-            id: (Date.now() + 1).toString(),
-            type: 'bot',
-            content: `❌ ${t('chatMode.expenseAddFailed')}`,
-            timestamp: new Date()
-          }]));
-          showError(t('messages.expenseAddFailed'));
+          console.error('Failed to create category:', error);
         }
-      } else {
+      }
+
+      // Create the expense
+      const newExpense: Omit<Expense, 'id'> = {
+        date: extractedData.date,
+        amount: extractedData.amount,
+        category: categoryName,
+        note: extractedData.note
+      };
+
+      try {
+        await addExpense(newExpense);
+        
         setMessages(prev => prev.slice(0, -1).concat([{
           id: (Date.now() + 1).toString(),
           type: 'bot',
-          content: t('chatMode.uncertainCategory', { amount: expenseData.amount, description: expenseData.description }),
+          content: `✅ ${t('chatMode.expenseAdded', { 
+            description: extractedData.note, 
+            amount: extractedData.amount, 
+            category: categoryName 
+          })} (${extractedData.date})`,
           timestamp: new Date(),
-          suggestedCategory: 'New Category'
+          expense: { ...newExpense, id: Date.now().toString() } as Expense
         }]));
+        
+        showSuccess(t('messages.expenseAdded'));
+      } catch (error) {
+        setMessages(prev => prev.slice(0, -1).concat([{
+          id: (Date.now() + 1).toString(),
+          type: 'bot',
+          content: `❌ ${t('chatMode.expenseAddFailed')}`,
+          timestamp: new Date()
+        }]));
+        showError(t('messages.expenseAddFailed'));
       }
     } catch (error) {
       console.error('Error processing message:', error);

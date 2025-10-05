@@ -1,5 +1,5 @@
 // LLM Service for expense classification
-// Supports multiple providers: Groq, OpenAI, Hugging Face, and keyword fallback
+// Supports multiple providers: Groq, OpenAI, Gemini, and Claude
 
 class LLMService {
   constructor() {
@@ -8,37 +8,93 @@ class LLMService {
     this.geminiApiKey = process.env.GEMINI_API_KEY;
     this.claudeApiKey = process.env.CLAUDE_API_KEY;
     this.openaiApiKey = process.env.OPENAI_API_KEY;
-    this.huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
   }
 
-  async classifyExpense(message, amount, description, existingCategories = [], customPrompt = null) {
+
+  async extractExpenseData(message, existingCategories = [], customPrompt = null, userDate = null) {
     try {
       switch (this.provider) {
         case 'groq':
-          return await this.classifyWithGroq(message, amount, description, existingCategories, customPrompt);
+          return await this.extractWithGroq(message, existingCategories, customPrompt, userDate);
         case 'gemini':
-          return await this.classifyWithGemini(message, amount, description, existingCategories, customPrompt);
+          return await this.extractWithGemini(message, existingCategories, customPrompt, userDate);
         case 'claude':
-          return await this.classifyWithClaude(message, amount, description, existingCategories, customPrompt);
+          return await this.extractWithClaude(message, existingCategories, customPrompt, userDate);
         case 'openai':
-          return await this.classifyWithOpenAI(message, amount, description, existingCategories, customPrompt);
-        case 'huggingface':
-          return await this.classifyWithHuggingFace(message, amount, description, existingCategories, customPrompt);
+          return await this.extractWithOpenAI(message, existingCategories, customPrompt, userDate);
         default:
           throw new Error(`Unsupported LLM provider: ${this.provider}. Please configure a valid LLM provider.`);
       }
     } catch (error) {
-      console.error('LLM classification error:', error);
-      throw error; // Re-throw the error instead of falling back
+      console.error('LLM extraction error:', error);
+      throw error;
     }
   }
 
-  async classifyWithGroq(message, amount, description, existingCategories, customPrompt = null) {
+
+
+
+
+
+
+
+
+
+
+  getDefaultPrompt() {
+    return `You are an expert expense data extraction and categorization assistant. Extract expense information from natural language input and classify it into the most appropriate category.
+
+Today is: {userDate}
+
+Available Categories: {categoriesList}
+
+Rules:
+1. Extract amount (numeric value only, no currency symbols)
+2. Determine the most appropriate category from existing ones or suggest a new one
+3. CRITICAL: Generate a clear, descriptive note in the EXACT same language as the input. If input is Thai, note must be Thai. If input is English, note must be English.
+4. Parse date references:
+   - "today" = {userDate}
+   - "yesterday" = previous day from {userDate}
+   - Extract specific dates if mentioned
+   - If no date is mentioned, use today's date ({userDate})
+5. Be consistent with similar expenses
+6. User living in Thailand consider Thailand merchant
+
+OVERLAPPING CATEGORIES - Choose the most specific one:
+- House loan/mortgage → "Housing" (not Loans)
+- Car loan → "Loans" (not Transportation)
+- Student loan → "Loans" (not Education)
+- Credit card payment → "Loans" (not Shopping)
+- Groceries → "Food & Dining" (not Shopping)
+- Restaurant meal → "Food & Dining" (not Entertainment)
+- Gym membership → "Healthcare" (not Entertainment)
+- Work lunch → "Food & Dining" (not Miscellaneous)
+
+6. Respond with ONLY a JSON object in this exact format:
+{
+  "amount": number,
+  "category": "Category Name",
+  "note": "Descriptive note in same language as input",
+  "date": "YYYY-MM-DD",
+  "is_new_category": true/false
+}
+
+Examples:
+- "Bought coffee for 150 baht" → {"amount": 150, "category": "Food & Dining", "note": "Coffee purchase", "date": "{userDate}", "is_new_category": false}
+- "Yesterday spent 500 on groceries" → {"amount": 500, "category": "Food & Dining", "note": "Grocery shopping", "date": "previous day from {userDate}", "is_new_category": false}
+- "Paid 2000 for car repair today" → {"amount": 2000, "category": "Transportation", "note": "Car repair", "date": "{userDate}", "is_new_category": false}
+- "ซื้อกาแฟ 150 บาท" → {"amount": 150, "category": "Food & Dining", "note": "ซื้อกาแฟ", "date": "{userDate}", "is_new_category": false}
+- "เมื่อวานซื้อของ 500 บาท" → {"amount": 500, "category": "Food & Dining", "note": "ซื้อของเมื่อวาน", "date": "previous day from {userDate}", "is_new_category": false}
+- "จ่ายค่าซ่อมรถ 2000 บาทวันนี้" → {"amount": 2000, "category": "Transportation", "note": "ค่าซ่อมรถ", "date": "{userDate}", "is_new_category": false}`;
+  }
+
+  // Extraction methods for each provider
+  async extractWithGroq(message, existingCategories, customPrompt = null, userDate = null) {
     if (!this.groqApiKey) {
       throw new Error('Groq API key not configured');
     }
 
-    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories, customPrompt);
+    const { systemPrompt, userMessage } = this.buildExtractionPrompt(message, existingCategories, customPrompt, userDate);
     
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -58,7 +114,7 @@ class LLMService {
             content: userMessage
           }
         ],
-        max_tokens: 150,
+        max_tokens: 300,
         temperature: 0.3,
         stream: false
       })
@@ -67,28 +123,19 @@ class LLMService {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Groq API error details:', errorText);
-      
-      if (response.status === 429) {
-        throw new Error('Groq rate limit exceeded. Please wait a moment and try again.');
-      } else if (response.status === 401) {
-        throw new Error('Groq API key is invalid. Please check your GROQ_API_KEY in the .env file.');
-      } else if (response.status === 400) {
-        throw new Error(`Groq API bad request. Please check your model name and request format. Error: ${errorText}`);
-      } else {
-        throw new Error(`Groq API error: ${response.status} - ${response.statusText}. Details: ${errorText}`);
-      }
+      throw new Error(`Groq API error: ${response.status} - ${response.statusText}`);
     }
 
     const data = await response.json();
-    return this.parseLLMResponse(data.choices[0].message.content, existingCategories);
+    return this.parseExtractionResponse(data.choices[0].message.content, existingCategories);
   }
 
-  async classifyWithGemini(message, amount, description, existingCategories, customPrompt = null) {
+  async extractWithGemini(message, existingCategories, customPrompt = null, userDate = null) {
     if (!this.geminiApiKey) {
       throw new Error('Gemini API key not configured');
     }
 
-    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories, customPrompt);
+    const { systemPrompt, userMessage } = this.buildExtractionPrompt(message, existingCategories, customPrompt, userDate);
     const fullPrompt = `${systemPrompt}\n\n${userMessage}`;
     
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-pro'}:generateContent?key=${this.geminiApiKey}`, {
@@ -104,7 +151,7 @@ class LLMService {
         }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 150
+          maxOutputTokens: 300
         }
       })
     });
@@ -116,15 +163,15 @@ class LLMService {
     const data = await response.json();
     const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
-    return this.parseLLMResponse(generatedText, existingCategories);
+    return this.parseExtractionResponse(generatedText, existingCategories);
   }
 
-  async classifyWithClaude(message, amount, description, existingCategories, customPrompt = null) {
+  async extractWithClaude(message, existingCategories, customPrompt = null, userDate = null) {
     if (!this.claudeApiKey) {
       throw new Error('Claude API key not configured');
     }
 
-    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories, customPrompt);
+    const { systemPrompt, userMessage } = this.buildExtractionPrompt(message, existingCategories, customPrompt, userDate);
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -135,7 +182,7 @@ class LLMService {
       },
       body: JSON.stringify({
         model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
-        max_tokens: 150,
+        max_tokens: 300,
         system: systemPrompt,
         messages: [{
           role: 'user',
@@ -151,15 +198,15 @@ class LLMService {
     const data = await response.json();
     const generatedText = data.content?.[0]?.text || '';
     
-    return this.parseLLMResponse(generatedText, existingCategories);
+    return this.parseExtractionResponse(generatedText, existingCategories);
   }
 
-  async classifyWithOpenAI(message, amount, description, existingCategories, customPrompt = null) {
+  async extractWithOpenAI(message, existingCategories, customPrompt = null, userDate = null) {
     if (!this.openaiApiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
-    const { systemPrompt, userMessage } = this.buildClassificationPrompt(message, amount, description, existingCategories, customPrompt);
+    const { systemPrompt, userMessage } = this.buildExtractionPrompt(message, existingCategories, customPrompt, userDate);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -179,210 +226,85 @@ class LLMService {
             content: userMessage
           }
         ],
-        max_tokens: 150,
+        max_tokens: 300,
         temperature: 0.3
       })
     });
 
     if (!response.ok) {
       if (response.status === 429) {
-        throw new Error('OpenAI rate limit exceeded. Please wait a moment and try again, or consider using a different LLM provider like Groq or Gemini.');
+        throw new Error('OpenAI rate limit exceeded. Please wait a moment and try again.');
       } else if (response.status === 401) {
         throw new Error('OpenAI API key is invalid. Please check your OPENAI_API_KEY in the .env file.');
       } else if (response.status === 402) {
-        throw new Error('OpenAI payment required. Your free credits may have been exhausted. Please add payment method or use a different provider.');
+        throw new Error('OpenAI payment required. Your free credits may have been exhausted.');
       } else {
         throw new Error(`OpenAI API error: ${response.status} - ${response.statusText}`);
       }
     }
 
     const data = await response.json();
-    return this.parseLLMResponse(data.choices[0].message.content, existingCategories);
-  }
-
-  async classifyWithHuggingFace(message, amount, description, existingCategories, customPrompt = null) {
-    if (!this.huggingfaceApiKey) {
-      throw new Error('Hugging Face API key not configured');
-    }
-
-    // Use a text classification model
-    const response = await fetch('https://api-inference.huggingface.co/models/facebook/bart-large-mnli', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.huggingfaceApiKey}`,
-        'Content-Type': 'application/json',
-      },
-       body: JSON.stringify({
-         inputs: `${message} ${description}`,
-         parameters: {
-           candidate_labels: existingCategories.length > 0 ? existingCategories : [
-             'Food & Dining', 'Transportation', 'Shopping', 'Entertainment', 
-             'Healthcare', 'Utilities', 'Groceries', 'Education', 'Travel', 
-             'Insurance', 'Housing', 'Personal Care', 'Subscriptions', 
-             'Savings & Investment', 'Gifts & Donations', 'Pet Care', 
-             'Office Supplies', 'Miscellaneous'
-           ]
-         }
-       })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Hugging Face API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return this.parseHuggingFaceResponse(data, existingCategories);
+    return this.parseExtractionResponse(data.choices[0].message.content, existingCategories);
   }
 
 
-  getDefaultPrompt(categoriesList = '{categoriesList}') {
-    return `You are an expert expense categorization assistant. Your job is to classify expenses into the most appropriate category.
-
-Available Categories: ${categoriesList}
-
-Rules:
-1. Choose the category that best matches the expense description
-2. Consider the amount and context when classifying
-3. If no existing category fits well, suggest a new category
-4. Respond with ONLY a JSON object in this exact format: {"field": "Category Name", "is_new": true/false}
-5. Be consistent with similar expenses
-6. User living in Thailand consider Thailand merchant
-
-OVERLAPPING CATEGORIES - Choose the most specific one:
-- House loan/mortgage → "Housing" (not Loans)
-- Car loan → "Loans" (not Transportation)
-- Student loan → "Loans" (not Education)
-- Credit card payment → "Loans" (not Shopping)
-- Groceries → "Food & Dining" (not Shopping)
-- Restaurant meal → "Food & Dining" (not Entertainment)
-- Gym membership → "Healthcare" (not Entertainment)
-- Work lunch → "Food & Dining" (not Miscellaneous)
-
-Examples:
-- "Coffee $4.50" → {"field": "Food & Dining", "is_new": false}
-- "House loan payment $1200" → {"field": "Housing", "is_new": false}
-- "Car loan $400" → {"field": "Loans", "is_new": false}
-- "Student loan $300" → {"field": "Loans", "is_new": false}
-- "Grocery shopping $80" → {"field": "Food & Dining", "is_new": false}`;
-  }
-
-  // Shared method to inject categories into any prompt
-  injectCategoriesIntoPrompt(prompt, categoriesList) {
-    // Replace {categoriesList} placeholder with actual categories
-    let systemPrompt = prompt.replace('{categoriesList}', categoriesList);
-    
-    // If no placeholder was found, append categories info
-    if (!prompt.includes('{categoriesList}')) {
-      systemPrompt += `\n\nAvailable Categories: ${categoriesList}`;
-    }
-    
-    return systemPrompt;
-  }
-
-  buildClassificationPrompt(message, amount, description, existingCategories, customPrompt = null) {
+  buildExtractionPrompt(message, existingCategories, customPrompt = null, userDate = null) {
     const categoriesList = existingCategories.length > 0 
       ? existingCategories.join(', ')
       : 'No existing categories - suggest new ones as needed';
+
+    // Use user date if provided, otherwise use server date
+    const now = userDate ? new Date(userDate) : new Date();
+    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
 
     // Get the base prompt (custom or default)
     let basePrompt;
     if (customPrompt) {
       basePrompt = customPrompt;
     } else {
-      basePrompt = this.getDefaultPrompt('{categoriesList}');
+      basePrompt = this.getDefaultPrompt();
     }
 
-    // Inject categories into the prompt
-    const systemPrompt = this.injectCategoriesIntoPrompt(basePrompt, categoriesList);
+    // Replace placeholders with actual values
+    let systemPrompt = basePrompt
+      .replace(/{userDate}/g, today)
+      .replace(/{categoriesList}/g, categoriesList);
 
     return {
       systemPrompt,
-      userMessage: `Classify this expense:
-Message: "${message}"
-Amount: $${amount}
-Description: "${description}"
-
-Respond with JSON:`
+      userMessage: `Extract expense data from this message: "${message}"`
     };
   }
 
-  parseLLMResponse(response, existingCategories) {
+  parseExtractionResponse(response, existingCategories) {
     const cleanResponse = response.trim();
     
     try {
       // Try to parse as JSON first
-      const jsonMatch = cleanResponse.match(/\{.*\}/);
+      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const jsonStr = jsonMatch[0];
         const parsed = JSON.parse(jsonStr);
         
-        if (parsed.field && typeof parsed.is_new === 'boolean') {
+        if (parsed.amount && parsed.category && parsed.note && parsed.date) {
           return {
-            category: parsed.field,
-            confidence: 0.9,
-            description: parsed.is_new ? 'AI suggested new category' : 'AI classified using existing category',
-            isExisting: !parsed.is_new
+            amount: parseFloat(parsed.amount),
+            category: parsed.category,
+            note: parsed.note,
+            date: parsed.date,
+            isNewCategory: parsed.is_new_category || false,
+            confidence: 0.9
           };
         }
       }
     } catch (error) {
-      console.log('Failed to parse JSON response, falling back to text parsing:', error.message);
+      console.log('Failed to parse JSON response:', error.message);
     }
     
-    // Fallback to old parsing method for backward compatibility
-    if (cleanResponse.startsWith('NEW_CATEGORY:')) {
-      const newCategory = cleanResponse.replace('NEW_CATEGORY:', '').trim();
-      return {
-        category: newCategory,
-        confidence: 0.8,
-        description: 'AI suggested new category',
-        isExisting: false
-      };
-    }
-
-    // Check if it matches existing categories
-    const matchedCategory = existingCategories.find(cat => 
-      cleanResponse.toLowerCase().includes(cat.toLowerCase())
-    );
-
-    if (matchedCategory) {
-      return {
-        category: matchedCategory,
-        confidence: 0.9,
-        description: 'AI classified based on context',
-        isExisting: true
-      };
-    }
-
-    // If no clear match, suggest a new category
-    return {
-      category: cleanResponse || 'Miscellaneous',
-      confidence: 0.6,
-      description: 'AI suggested category',
-      isExisting: false
-    };
+    // No fallback - just throw an error
+    throw new Error('Failed to extract expense data from LLM response');
   }
 
-  parseHuggingFaceResponse(data, existingCategories) {
-    if (data.labels && data.scores) {
-      const bestMatch = data.labels[0];
-      const confidence = data.scores[0];
-      
-      return {
-        category: bestMatch,
-        confidence: confidence,
-        description: 'Hugging Face classification',
-        isExisting: existingCategories.includes(bestMatch)
-      };
-    }
-
-    return {
-      category: null,
-      confidence: 0,
-      description: 'No clear classification',
-      isExisting: false
-    };
-  }
 }
 
 export default LLMService;

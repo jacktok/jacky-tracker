@@ -151,12 +151,12 @@ export const UserPromptManagement: React.FC<UserPromptManagementProps> = ({
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Enter your custom prompt for expense classification. Use {categoriesList} to inject available categories..."
+            placeholder="Enter your custom prompt for expense extraction. Use {categoriesList} for categories and {userDate} for today's date..."
             className="w-full p-3 border border-border rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-panel text-text"
             rows={6}
           />
           <div className="text-xs text-text-muted">
-            💡 Use <code className="bg-panel-2 px-1 rounded border border-border">{'{categoriesList}'}</code> to inject your available categories
+            💡 Use <code className="bg-panel-2 px-1 rounded border border-border">{'{categoriesList}'}</code> to inject your available categories and <code className="bg-panel-2 px-1 rounded border border-border">{'{userDate}'}</code> for today's date
           </div>
         </div>
         <div className="flex gap-2">
@@ -173,7 +173,7 @@ export const UserPromptManagement: React.FC<UserPromptManagementProps> = ({
       {!hasCustomPrompt && (
         <div className="bg-accent-bg border border-accent rounded-lg p-3">
           <div className="text-sm text-accent">
-            <strong>Default Prompt:</strong> Using the built-in system prompt for expense classification.
+            <strong>Default Prompt:</strong> Using the built-in system prompt for expense extraction and classification.
           </div>
         </div>
       )}
