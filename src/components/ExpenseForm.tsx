@@ -5,6 +5,7 @@ import { Input } from './ui/Input';
 import { Chip } from './ui/Chip';
 import { ExpenseFormData } from '../types';
 import { validateExpenseForm } from '../utils';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface ExpenseFormProps {
   categories: string[];
@@ -19,6 +20,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
   onAddCategory,
   isLoading = false
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<ExpenseFormData>({
     date: new Date().toISOString().slice(0, 10),
     amount: 0,
@@ -89,7 +91,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
   return (
     <div className="panel">
-      <h2 className="panel-title">➕ Add Expense</h2>
+      <h2 className="panel-title">➕ {t('expenseForm.title')}</h2>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         {errors.length > 0 && (
@@ -104,17 +106,17 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
         <div className="form-sections">
           <div className="form-section">
-            <h3 className="form-section__title">💳 Transaction Details</h3>
+            <h3 className="form-section__title">💳 {t('expenseForm.transactionDetails')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <Input
-                label="Date"
+                label={t('expenseForm.date')}
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                 required
               />
               <Input
-                label="Amount"
+                label={t('expenseForm.amount')}
                 type="number"
                 step="0.01"
                 min="0"
@@ -125,17 +127,17 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
               />
             </div>
             <div className="mini-actions">
-              <Chip onClick={() => handleQuickDate(0)}>Today</Chip>
-              <Chip onClick={() => handleQuickDate(-1)}>Yesterday</Chip>
+              <Chip onClick={() => handleQuickDate(0)}>{t('expenseForm.today')}</Chip>
+              <Chip onClick={() => handleQuickDate(-1)}>{t('expenseForm.yesterday')}</Chip>
             </div>
           </div>
 
           <div className="form-section">
-            <h3 className="form-section__title">🏷️ Category & Description</h3>
+            <h3 className="form-section__title">🏷️ {t('expenseForm.category')} & {t('expenseForm.note')}</h3>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-semibold text-text-secondary mb-2 block">
-                  Category
+                  {t('expenseForm.category')}
                 </label>
                 <div className="category-buttons">
                   {categories.map((category) => (
@@ -157,14 +159,14 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   className="mt-2"
                 >
                   <Plus size={14} />
-                  Add New Category
+                  {t('expenseForm.addNewCategory')}
                 </Button>
               </div>
 
               {showAddCategory && (
                 <div className="add-category">
                   <Input
-                    placeholder="Enter new category name"
+                    placeholder={t('expenseForm.enterNewCategory')}
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     maxLength={20}
@@ -177,7 +179,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
                     disabled={!newCategory.trim()}
                   >
                     <Check size={14} />
-                    Add
+                    {t('actions.add')}
                   </Button>
                   <Button
                     type="button"
@@ -189,15 +191,15 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
                     }}
                   >
                     <X size={14} />
-                    Cancel
+                    {t('actions.cancel')}
                   </Button>
                 </div>
               )}
 
               <Input
-                label="Note"
+                label={t('expenseForm.note')}
                 type="text"
-                placeholder="Optional description..."
+                placeholder={t('expenseForm.notePlaceholder')}
                 value={formData.note}
                 onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
                 maxLength={140}
@@ -213,7 +215,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
             disabled={!formData.category || isSuccess}
             className={isSuccess ? "bg-success border-success text-white" : ""}
           >
-            {isSuccess ? "✅ Added!" : "💾 Add Expense"}
+            {isSuccess ? "✅ " + t('expenseForm.added') : "💾 " + t('expenseForm.addExpense')}
           </Button>
           <Button
             type="button"
@@ -229,7 +231,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
               setErrors([]);
             }}
           >
-            🔄 Reset
+            🔄 {t('actions.reset')}
           </Button>
         </div>
       </form>

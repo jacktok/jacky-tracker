@@ -3,6 +3,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Header } from './components/Header';
 import { useExpenses } from './hooks/useExpenses';
 import { useToast } from './hooks/useToast';
+import { useTranslation } from './hooks/useTranslation';
 
 // Lazy load components for code splitting
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -12,6 +13,7 @@ const ChatMode = lazy(() => import('./components/ChatMode'));
 const AccountManagement = lazy(() => import('./components/AccountManagement'));
 
 function App() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'categories' | 'summary' | 'chat' | 'settings'>('dashboard');
   const {
     expenses,
@@ -28,27 +30,27 @@ function App() {
   const handleAddCategory = async (category: string) => {
     try {
       await addCategory(category);
-      showSuccess('Category added successfully');
+      showSuccess(t('messages.categoryAdded'));
     } catch (error) {
-      showError('Failed to add category');
+      showError(t('messages.categoryAddFailed'));
     }
   };
 
   const handleDeleteCategory = async (category: string, migrateTo?: string) => {
     try {
       await deleteCategory(category, migrateTo);
-      showSuccess('Category deleted successfully');
+      showSuccess(t('messages.categoryDeleted'));
     } catch (error) {
-      showError('Failed to delete category');
+      showError(t('messages.categoryDeleteFailed'));
     }
   };
 
   const handleRenameCategory = async (oldCategory: string, newCategory: string) => {
     try {
       await renameCategory(oldCategory, newCategory);
-      showSuccess('Category renamed successfully');
+      showSuccess(t('messages.categoryRenamed'));
     } catch (error) {
-      showError('Failed to rename category');
+      showError(t('messages.categoryRenameFailed'));
     }
   };
 
@@ -70,7 +72,7 @@ function App() {
     a.click();
     URL.revokeObjectURL(url);
     
-    showSuccess('Data exported successfully');
+    showSuccess(t('messages.dataExported'));
   };
 
   const handleImport = async (file: File) => {

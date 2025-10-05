@@ -6,6 +6,7 @@ import { Select } from './ui/Select';
 import { Badge } from './ui/Badge';
 import { Expense } from '../types';
 import { formatCurrency, escapeHtml } from '../utils';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface ExpenseTableProps {
   expenses: Expense[];
@@ -20,6 +21,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
   onUpdateExpense,
   onDeleteExpense
 }) => {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<Expense>>({});
 
@@ -47,7 +49,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Delete this expense?')) {
+    if (window.confirm(t('expenseTable.deleteConfirm'))) {
       await onDeleteExpense(id);
     }
   };
@@ -55,9 +57,9 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
   if (expenses.length === 0) {
     return (
       <div className="panel">
-        <h2 className="panel-title">📋 Expenses</h2>
+        <h2 className="panel-title">📋 {t('expenseTable.title')}</h2>
         <div className="empty">
-          📝 No expenses yet - Add your first expense above!
+          📝 {t('expenseTable.emptyMessage')}
         </div>
       </div>
     );
@@ -65,17 +67,17 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
   return (
     <div className="panel">
-      <h2 className="panel-title">📋 Expenses</h2>
+      <h2 className="panel-title">📋 {t('expenseTable.title')}</h2>
       
       <div className="responsive-table">
         <table className="table">
           <thead>
             <tr>
-              <th className="table__header">Date</th>
-              <th className="table__header">Amount</th>
-              <th className="table__header">Category</th>
-              <th className="table__header">Note</th>
-              <th className="table__header">Actions</th>
+              <th className="table__header">{t('expenseTable.date')}</th>
+              <th className="table__header">{t('expenseTable.amount')}</th>
+              <th className="table__header">{t('expenseTable.category')}</th>
+              <th className="table__header">{t('expenseTable.note')}</th>
+              <th className="table__header">{t('expenseTable.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -146,7 +148,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
                         disabled={!editData.date || !editData.amount || !editData.category}
                       >
                         <Save size={14} />
-                        <span className="hidden sm:inline">Save</span>
+                        <span className="hidden sm:inline">{t('expenseTable.save')}</span>
                       </Button>
                       <Button
                         size="sm"
@@ -154,7 +156,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
                         onClick={handleCancel}
                       >
                         <X size={14} />
-                        <span className="hidden sm:inline">Cancel</span>
+                        <span className="hidden sm:inline">{t('expenseTable.cancel')}</span>
                       </Button>
                     </div>
                   ) : (
@@ -165,7 +167,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
                         onClick={() => handleEdit(expense)}
                       >
                         <Edit size={14} />
-                        <span className="hidden sm:inline">Edit</span>
+                        <span className="hidden sm:inline">{t('expenseTable.edit')}</span>
                       </Button>
                       <Button
                         size="sm"
@@ -173,7 +175,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
                         onClick={() => handleDelete(expense.id)}
                       >
                         <Trash2 size={14} />
-                        <span className="hidden sm:inline">Delete</span>
+                        <span className="hidden sm:inline">{t('expenseTable.delete')}</span>
                       </Button>
                     </div>
                   )}

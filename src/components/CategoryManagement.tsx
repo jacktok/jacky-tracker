@@ -4,6 +4,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Badge } from './ui/Badge';
 import { useToast } from '../hooks/useToast';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface CategoryManagementProps {
   categories: string[];
@@ -20,6 +21,7 @@ export function CategoryManagement({
   onDeleteCategory,
   onRenameCategory
 }: CategoryManagementProps) {
+  const { t } = useTranslation();
   const [newCategory, setNewCategory] = useState('');
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -44,19 +46,19 @@ export function CategoryManagement({
 
   const handleAddCategory = useCallback(() => {
     if (!newCategory.trim()) {
-      showError('Category name cannot be empty');
+      showError(t('categoryManagement.categoryEmpty'));
       return;
     }
 
     if (categories.includes(newCategory.trim())) {
-      showError('Category already exists');
+      showError(t('categoryManagement.categoryExists'));
       return;
     }
 
     onAddCategory(newCategory.trim());
     setNewCategory('');
-    showSuccess('Category added successfully');
-  }, [newCategory, categories, onAddCategory, showSuccess, showError]);
+    showSuccess(t('categoryManagement.categoryAdded'));
+  }, [newCategory, categories, onAddCategory, showSuccess, showError, t]);
 
   const handleStartEdit = useCallback((category: string) => {
     setEditingCategory(category);
@@ -70,23 +72,23 @@ export function CategoryManagement({
 
   const handleSaveEdit = useCallback(() => {
     if (!editValue.trim()) {
-      showError('Category name cannot be empty');
+      showError(t('categoryManagement.categoryEmpty'));
       return;
     }
 
     if (editValue.trim() !== editingCategory && categories.includes(editValue.trim())) {
-      showError('Category already exists');
+      showError(t('categoryManagement.categoryExists'));
       return;
     }
 
     if (editValue.trim() !== editingCategory) {
       onRenameCategory(editingCategory!, editValue.trim());
-      showSuccess('Category renamed successfully');
+      showSuccess(t('categoryManagement.categoryRenamed'));
     }
 
     setEditingCategory(null);
     setEditValue('');
-  }, [editValue, editingCategory, categories, onRenameCategory, showSuccess, showError]);
+  }, [editValue, editingCategory, categories, onRenameCategory, showSuccess, showError, t]);
 
   const handleDeleteClick = useCallback((category: string) => {
     const categoryExpenses = expenses.filter(exp => exp.category === category);
@@ -95,24 +97,24 @@ export function CategoryManagement({
       setMigrateTo('');
     } else {
       onDeleteCategory(category);
-      showSuccess('Category deleted successfully');
+      showSuccess(t('categoryManagement.categoryDeleted'));
     }
-  }, [expenses, onDeleteCategory, showSuccess]);
+  }, [expenses, onDeleteCategory, showSuccess, t]);
 
   const handleConfirmDelete = useCallback(() => {
     if (!deleteConfirm) return;
 
     const categoryExpenses = expenses.filter(exp => exp.category === deleteConfirm);
     if (categoryExpenses.length > 0 && !migrateTo) {
-      showError('Please select a category to migrate expenses to');
+      showError(t('categoryManagement.selectMigrateCategory'));
       return;
     }
 
     onDeleteCategory(deleteConfirm, migrateTo || undefined);
     setDeleteConfirm(null);
     setMigrateTo('');
-    showSuccess('Category deleted and expenses migrated successfully');
-  }, [deleteConfirm, migrateTo, expenses, onDeleteCategory, showSuccess, showError]);
+    showSuccess(t('categoryManagement.categoryMigrated'));
+  }, [deleteConfirm, migrateTo, expenses, onDeleteCategory, showSuccess, showError, t]);
 
   const handleCancelDelete = useCallback(() => {
     setDeleteConfirm(null);
@@ -125,37 +127,37 @@ export function CategoryManagement({
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="bg-card rounded-lg p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-text mb-3 sm:mb-4">Add New Category</h2>
+        <h2 className="text-lg sm:text-xl font-semibold text-text mb-3 sm:mb-4">{t('categoryManagement.addNewCategory')}</h2>
         <div className="flex gap-2">
           <Input
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            placeholder="Enter category name"
+            placeholder={t('categoryManagement.enterCategoryName')}
             onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
             className="flex-1"
           />
           <Button onClick={handleAddCategory} disabled={!newCategory.trim()}>
-            Add Category
+            {t('categoryManagement.addCategory')}
           </Button>
         </div>
       </div>
 
       <div className="bg-card rounded-lg p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-text mb-3 sm:mb-4">Manage Categories</h2>
+        <h2 className="text-lg sm:text-xl font-semibold text-text mb-3 sm:mb-4">{t('categoryManagement.manageCategories')}</h2>
         
         {categoryStats.length === 0 ? (
           <div className="text-center py-8 text-text-muted">
-            No categories found. Add your first category above.
+            {t('categoryManagement.noCategories')}
           </div>
         ) : (
           <div className="table-container">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Category</th>
-                  <th>Expenses</th>
-                  <th>Total Amount</th>
-                  <th className="text-right">Actions</th>
+                  <th>{t('categoryManagement.category')}</th>
+                  <th>{t('categoryManagement.expenses')}</th>
+                  <th>{t('categoryManagement.totalAmount')}</th>
+                  <th className="text-right">{t('categoryManagement.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,7 +180,7 @@ export function CategoryManagement({
                     </td>
                     <td className="table__cell">
                       <Badge variant="secondary">
-                        {count} {count === 1 ? 'expense' : 'expenses'}
+                        {count} {count === 1 ? t('expenseTable.title').toLowerCase() : t('expenseTable.title').toLowerCase()}
                       </Badge>
                     </td>
                     <td className="table__cell">
@@ -188,10 +190,10 @@ export function CategoryManagement({
                       {editingCategory === category ? (
                         <div className="table-actions">
                           <Button size="sm" onClick={handleSaveEdit}>
-                            Save
+                            {t('categoryManagement.save')}
                           </Button>
                           <Button size="sm" variant="secondary" onClick={handleCancelEdit}>
-                            Cancel
+                            {t('categoryManagement.cancel')}
                           </Button>
                         </div>
                       ) : (
@@ -201,14 +203,14 @@ export function CategoryManagement({
                             variant="secondary"
                             onClick={() => handleStartEdit(category)}
                           >
-                            Rename
+                            {t('categoryManagement.rename')}
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
                             onClick={() => handleDeleteClick(category)}
                           >
-                            Delete
+                            {t('categoryManagement.delete')}
                           </Button>
                         </div>
                       )}
@@ -226,11 +228,10 @@ export function CategoryManagement({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg p-4 sm:p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4">
-              Delete Category "{deleteConfirm}"
+              {t('categoryManagement.deleteCategoryTitle')} "{deleteConfirm}"
             </h3>
             <p className="text-text-secondary mb-3 sm:mb-4">
-              This category has {expenses.filter(exp => exp.category === deleteConfirm).length} expenses. 
-              Where would you like to migrate them to?
+              {t('categoryManagement.migrateExpenses', { count: expenses.filter(exp => exp.category === deleteConfirm).length })}
             </p>
             
             <div className="mb-3 sm:mb-4">
@@ -238,7 +239,7 @@ export function CategoryManagement({
                 value={migrateTo}
                 onChange={(e) => setMigrateTo(e.target.value)}
                 options={[
-                  { value: '', label: 'Select a category...' },
+                  { value: '', label: t('categoryManagement.selectCategory') },
                   ...availableCategories.map(cat => ({ value: cat, label: cat }))
                 ]}
               />
@@ -246,14 +247,14 @@ export function CategoryManagement({
             
             <div className="flex gap-2 justify-end">
               <Button variant="secondary" onClick={handleCancelDelete}>
-                Cancel
+                {t('categoryManagement.cancel')}
               </Button>
               <Button 
                 variant="destructive" 
                 onClick={handleConfirmDelete}
                 disabled={!migrateTo}
               >
-                Delete & Migrate
+                {t('categoryManagement.deleteAndMigrate')}
               </Button>
             </div>
           </div>

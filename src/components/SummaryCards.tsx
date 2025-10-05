@@ -1,6 +1,7 @@
 import React from 'react';
 import { CreditCard, Calendar, BarChart3 } from 'lucide-react';
 import { formatCurrency } from '../utils';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface SummaryCardsProps {
   totalFiltered: number;
@@ -13,24 +14,26 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
   totalThisMonth,
   entryCount
 }) => {
+  const { t } = useTranslation();
+  
   const cards = [
     {
       icon: CreditCard,
-      label: 'Total (filtered)',
+      label: t('summary.totalFiltered'),
       value: formatCurrency(totalFiltered),
       valueMobile: formatCurrency(totalFiltered, false),
       color: 'text-accent'
     },
     {
       icon: Calendar,
-      label: 'This Month',
+      label: t('summary.thisMonth'),
       value: formatCurrency(totalThisMonth),
       valueMobile: formatCurrency(totalThisMonth, false),
       color: 'text-success'
     },
     {
       icon: BarChart3,
-      label: 'Entries',
+      label: t('summary.entries'),
       value: entryCount.toString(),
       valueMobile: entryCount.toString(),
       color: 'text-warning'
