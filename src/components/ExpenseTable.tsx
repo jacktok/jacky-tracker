@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit, Trash2, Save, X } from 'lucide-react';
+import { Edit, Trash2, Save, X, RefreshCw } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -13,13 +13,15 @@ interface ExpenseTableProps {
   categories: string[];
   onUpdateExpense: (id: string, data: Partial<Expense>) => Promise<void>;
   onDeleteExpense: (id: string) => Promise<void>;
+  onReload?: () => Promise<void>;
 }
 
 export const ExpenseTable: React.FC<ExpenseTableProps> = ({
   expenses,
   categories,
   onUpdateExpense,
-  onDeleteExpense
+  onDeleteExpense,
+  onReload
 }) => {
   const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,7 +69,20 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
   return (
     <div className="panel">
-      <h2 className="panel-title">📋 {t('expenseTable.title')}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="panel-title">📋 {t('expenseTable.title')}</h2>
+        {onReload && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={onReload}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw size={16} />
+            <span className="hidden sm:inline">{t('actions.reload')}</span>
+          </Button>
+        )}
+      </div>
       
       <div className="responsive-table">
         <table className="table">

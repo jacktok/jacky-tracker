@@ -54,9 +54,10 @@ Rules:
 3. CRITICAL: Generate a clear, descriptive note in the EXACT same language as the input. If input is Thai, note must be Thai. If input is English, note must be English.
 4. Parse date references:
    - "today" = {userDate}
-   - "yesterday" = previous day from {userDate}
+   - "yesterday" = calculate the actual previous date (e.g., if today is 2025-10-06, yesterday is 2025-10-05)
    - Extract specific dates if mentioned
    - If no date is mentioned, use today's date ({userDate})
+   - ALWAYS return actual dates in YYYY-MM-DD format, never descriptive text
 5. Be consistent with similar expenses
 6. User living in Thailand consider Thailand merchant
 
@@ -84,7 +85,7 @@ Examples:
 - "Yesterday spent 500 on groceries" → {"amount": 500, "category": "Food & Dining", "note": "Grocery shopping", "date": "previous day from {userDate}", "is_new_category": false}
 - "Paid 2000 for car repair today" → {"amount": 2000, "category": "Transportation", "note": "Car repair", "date": "{userDate}", "is_new_category": false}
 - "ซื้อกาแฟ 150 บาท" → {"amount": 150, "category": "Food & Dining", "note": "ซื้อกาแฟ", "date": "{userDate}", "is_new_category": false}
-- "เมื่อวานซื้อของ 500 บาท" → {"amount": 500, "category": "Food & Dining", "note": "ซื้อของเมื่อวาน", "date": "previous day from {userDate}", "is_new_category": false}
+- "เมื่อวานซื้อของ 500 บาท" → {"amount": 500, "category": "Food & Dining", "note": "ซื้อของเมื่อวาน", "date": "2025-10-05", "is_new_category": false}
 - "จ่ายค่าซ่อมรถ 2000 บาทวันนี้" → {"amount": 2000, "category": "Transportation", "note": "ค่าซ่อมรถ", "date": "{userDate}", "is_new_category": false}`;
   }
 

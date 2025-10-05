@@ -119,7 +119,10 @@ export function escapeHtml(str: string): string {
 }
 
 export function getDateRangePresets() {
-  const today = new Date();
+  // Use local date to avoid timezone issues
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
   
@@ -127,31 +130,39 @@ export function getDateRangePresets() {
   weekAgo.setDate(weekAgo.getDate() - 6);
   
   const monthAgo = new Date(today);
-  monthAgo.setDate(monthAgo.getDate() - 29);
+  monthAgo.setDate(monthAgo.getDate() - 29); // 29 days ago + today = 30 days total
   
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   
+  // Format dates as YYYY-MM-DD
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   return {
     today: {
-      from: today.toISOString().slice(0, 10),
-      to: today.toISOString().slice(0, 10)
+      from: formatDate(today),
+      to: formatDate(today)
     },
     yesterday: {
-      from: yesterday.toISOString().slice(0, 10),
-      to: yesterday.toISOString().slice(0, 10)
+      from: formatDate(yesterday),
+      to: formatDate(yesterday)
     },
     last7Days: {
-      from: weekAgo.toISOString().slice(0, 10),
-      to: today.toISOString().slice(0, 10)
+      from: formatDate(weekAgo),
+      to: formatDate(today)
     },
     last30Days: {
-      from: monthAgo.toISOString().slice(0, 10),
-      to: today.toISOString().slice(0, 10)
+      from: formatDate(monthAgo),
+      to: formatDate(today)
     },
     thisMonth: {
-      from: startOfMonth.toISOString().slice(0, 10),
-      to: endOfMonth.toISOString().slice(0, 10)
+      from: formatDate(startOfMonth),
+      to: formatDate(endOfMonth)
     }
   };
 }

@@ -28,7 +28,9 @@
     "delete": "ลบ",
     "edit": "แก้ไข",
     "save": "บันทึก",
-    "close": "ปิด"
+    "close": "ปิด",
+    "reload": "โหลดใหม่",
+    "default": "ค่าเริ่มต้น"
   },
   "expenseForm": {
     "title": "เพิ่มรายจ่าย",

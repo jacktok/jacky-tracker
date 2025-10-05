@@ -39,6 +39,17 @@ export const Filters: React.FC<FiltersProps> = ({
     onFiltersChange({ from, to });
   };
 
+  const resetToDefault = () => {
+    const defaultDateRange = getDateRangePresets().last30Days;
+    onFiltersChange({
+      from: defaultDateRange.from,
+      to: defaultDateRange.to,
+      category: '',
+      search: '',
+      sort: 'date_desc'
+    });
+  };
+
   const clearFilters = () => {
     onFiltersChange({
       from: '',
@@ -100,9 +111,14 @@ export const Filters: React.FC<FiltersProps> = ({
           <Chip onClick={() => applyDatePreset('thisMonth')}>📊 {t('filters.thisMonth')}</Chip>
         </div>
         
-        <Button variant="secondary" size="sm" onClick={clearFilters}>
-          🧹 {t('actions.clear')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={resetToDefault}>
+            🔄 {t('actions.default')}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={clearFilters}>
+            🧹 {t('actions.clear')}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -28,7 +28,9 @@
     "delete": "Delete",
     "edit": "Edit",
     "save": "Save",
-    "close": "Close"
+    "close": "Close",
+    "reload": "Reload",
+    "default": "Default"
   },
   "expenseForm": {
     "title": "Add Expense",

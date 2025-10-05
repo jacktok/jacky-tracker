@@ -27,7 +27,8 @@ export function Dashboard() {
     deleteExpense,
     updateExpense,
     addCategory,
-    updateFilters
+    updateFilters,
+    syncWithApi
   } = useExpenses();
 
   const { toasts, removeToast, showSuccess, showError, addToast } = useToast();
@@ -110,6 +111,7 @@ export function Dashboard() {
         categories={categories}
         onUpdateExpense={handleUpdateExpense}
         onDeleteExpense={handleDeleteExpense}
+        onReload={syncWithApi}
       />
       
       <CategoryBreakdown breakdown={categoryBreakdown} />
