@@ -5,6 +5,7 @@ import { Select } from './ui/Select';
 import { Chip } from './ui/Chip';
 import { Filters as FiltersType } from '../types';
 import { getDateRangePresets } from '../utils';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface FiltersProps {
   filters: FiltersType;
@@ -17,15 +18,17 @@ export const Filters: React.FC<FiltersProps> = ({
   categories,
   onFiltersChange
 }) => {
+  const { t } = useTranslation();
+  
   const sortOptions = [
-    { value: 'date_desc', label: 'Date ↓' },
-    { value: 'date_asc', label: 'Date ↑' },
-    { value: 'amount_desc', label: 'Amount ↓' },
-    { value: 'amount_asc', label: 'Amount ↑' }
+    { value: 'date_desc', label: t('filters.dateDesc') },
+    { value: 'date_asc', label: t('filters.dateAsc') },
+    { value: 'amount_desc', label: t('filters.amountDesc') },
+    { value: 'amount_asc', label: t('filters.amountAsc') }
   ];
 
   const categoryOptions = [
-    { value: '', label: 'All categories' },
+    { value: '', label: t('filters.allCategories') },
     ...categories.map(cat => ({ value: cat, label: cat }))
   ];
 
@@ -34,6 +37,17 @@ export const Filters: React.FC<FiltersProps> = ({
   const applyDatePreset = (preset: keyof typeof datePresets) => {
     const { from, to } = datePresets[preset];
     onFiltersChange({ from, to });
+  };
+
+  const resetToDefault = () => {
+    const defaultDateRange = getDateRangePresets().last30Days;
+    onFiltersChange({
+      from: defaultDateRange.from,
+      to: defaultDateRange.to,
+      category: '',
+      search: '',
+      sort: 'date_desc'
+    });
   };
 
   const clearFilters = () => {
@@ -48,41 +62,41 @@ export const Filters: React.FC<FiltersProps> = ({
 
   return (
     <div className="panel">
-      <h2 className="panel-title">🔍 Filters</h2>
+      <h2 className="panel-title">🔍 {t('filters.title')}</h2>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <Input
-          label="From"
+          label={t('filters.from')}
           type="date"
           value={filters.from}
           onChange={(e) => onFiltersChange({ from: e.target.value })}
         />
         
         <Input
-          label="To"
+          label={t('filters.to')}
           type="date"
           value={filters.to}
           onChange={(e) => onFiltersChange({ to: e.target.value })}
         />
         
         <Select
-          label="Category"
+          label={t('filters.category')}
           value={filters.category}
           onChange={(e) => onFiltersChange({ category: e.target.value })}
           options={categoryOptions}
         />
         
         <Input
-          label="Search note"
+          label={t('filters.searchNote')}
           type="text"
-          placeholder="Contains..."
+          placeholder={t('filters.contains')}
           value={filters.search}
           onChange={(e) => onFiltersChange({ search: e.target.value })}
           className="sm:col-span-2"
         />
         
         <Select
-          label="Sort"
+          label={t('filters.sort')}
           value={filters.sort}
           onChange={(e) => onFiltersChange({ sort: e.target.value as FiltersType['sort'] })}
           options={sortOptions}
@@ -91,15 +105,20 @@ export const Filters: React.FC<FiltersProps> = ({
       
       <div className="mt-4">
         <div className="flex flex-wrap gap-2 mb-4">
-          <Chip onClick={() => applyDatePreset('today')}>📅 Today</Chip>
-          <Chip onClick={() => applyDatePreset('last7Days')}>📆 7d</Chip>
-          <Chip onClick={() => applyDatePreset('last30Days')}>📅 30d</Chip>
-          <Chip onClick={() => applyDatePreset('thisMonth')}>📊 This Month</Chip>
+          <Chip onClick={() => applyDatePreset('today')}>📅 {t('filters.today')}</Chip>
+          <Chip onClick={() => applyDatePreset('last7Days')}>📆 {t('filters.last7Days')}</Chip>
+          <Chip onClick={() => applyDatePreset('last30Days')}>📅 {t('filters.last30Days')}</Chip>
+          <Chip onClick={() => applyDatePreset('thisMonth')}>📊 {t('filters.thisMonth')}</Chip>
         </div>
         
-        <Button variant="secondary" size="sm" onClick={clearFilters}>
-          🧹 Clear
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={resetToDefault}>
+            🔄 {t('actions.default')}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={clearFilters}>
+            🧹 {t('actions.clear')}
+          </Button>
+        </div>
       </div>
     </div>
   );

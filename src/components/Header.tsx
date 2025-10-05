@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Upload, Download, Menu, X, BarChart3, Tag, PieChart, MessageCircle, User } from 'lucide-react';
+import { Moon, Sun, Upload, Download, Menu, X, BarChart3, Tag, PieChart, MessageCircle, User, Globe } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AuthButton } from './AuthButton';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useTranslation } from '../hooks/useTranslation';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface HeaderProps {
   theme: 'light' | 'dark';
@@ -20,6 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onTabChange
 }) => {
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNavDropdownOpen, setIsNavDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,6 +54,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleThemeToggle = () => {
     onToggleTheme();
+    setIsMobileMenuOpen(false);
+    setIsNavDropdownOpen(false);
+  };
+
+  const handleLanguageToggle = () => {
+    setLanguage(language === 'en' ? 'th' : 'en');
     setIsMobileMenuOpen(false);
     setIsNavDropdownOpen(false);
   };
@@ -101,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-white font-bold text-sm">💰</span>
             </div>
             <h1 className="text-lg sm:text-xl font-bold text-text tracking-tight">
-              Money Tracker
+              {t('app.title')}
             </h1>
           </div>
         </div>
@@ -121,7 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <BarChart3 size={16} className="inline mr-1.5" />
-                  Dashboard
+                  {t('navigation.dashboard')}
                 </button>
                 <button
                   onClick={() => handleTabClick('categories')}
@@ -132,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <Tag size={16} className="inline mr-1.5" />
-                  Categories
+                  {t('navigation.categories')}
                 </button>
                 <button
                   onClick={() => handleTabClick('summary')}
@@ -143,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <PieChart size={16} className="inline mr-1.5" />
-                  Summary
+                  {t('navigation.summary')}
                 </button>
                 <button
                   onClick={() => handleTabClick('chat')}
@@ -154,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <MessageCircle size={16} className="inline mr-1.5" />
-                  Chat
+                  {t('navigation.chat')}
                 </button>
                 <button
                   onClick={() => handleTabClick('settings')}
@@ -165,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <User size={16} className="inline mr-1.5" />
-                  Settings
+                  {t('navigation.settings')}
                 </button>
               </div>
 
@@ -175,6 +186,23 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Desktop Actions */}
         <div className="hidden xl:flex items-center gap-2">
+          <Button
+            variant="icon"
+            onClick={handleExportClick}
+            className="p-2"
+            title={t('actions.exportData')}
+          >
+            <Download size={20} />
+          </Button>
+          <Button
+            variant="icon"
+            onClick={handleImportClick}
+            className="p-2"
+            title={t('actions.importData')}
+          >
+            <Upload size={20} />
+          </Button>
+          <LanguageSwitcher />
           <AuthButton />
         </div>
 
@@ -193,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Unified Menu - Medium and Mobile Screens */}
       {(isMobileMenuOpen || isNavDropdownOpen) && (
-        <div ref={unifiedMenuRef} className="xl:hidden bg-card border-b border-border px-2 py-3 space-y-3 sticky top-[60px] sm:top-[72px] z-40 backdrop-blur-sm">
+        <div ref={unifiedMenuRef} className="xl:hidden bg-card/98 border-b border-border px-2 py-3 space-y-3 sticky top-[60px] sm:top-[72px] z-40 backdrop-blur-lg shadow-lg">
           {/* Mobile Navigation */}
           {onTabChange && (
             <div className="space-y-2">
@@ -206,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <BarChart3 size={16} />
-                Dashboard
+                {t('navigation.dashboard')}
               </button>
               <button
                 onClick={() => handleTabClick('categories')}
@@ -217,7 +245,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Tag size={16} />
-                Manage Categories
+                {t('navigation.manageCategories')}
               </button>
               <button
                 onClick={() => handleTabClick('summary')}
@@ -228,7 +256,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <PieChart size={16} />
-                Summary & Analytics
+                {t('navigation.summaryAnalytics')}
               </button>
               <button
                 onClick={() => handleTabClick('chat')}
@@ -239,7 +267,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <MessageCircle size={16} />
-                Chat Mode
+                {t('navigation.chatMode')}
               </button>
               <button
                 onClick={() => handleTabClick('settings')}
@@ -250,7 +278,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <User size={16} />
-                Account Settings
+                {t('navigation.accountSettings')}
               </button>
             </div>
           )}
@@ -258,25 +286,32 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Mobile Actions */}
           <div className="border-t border-border pt-3 space-y-2">
             <button
+              onClick={handleLanguageToggle}
+              className="w-full px-3 py-2 text-left text-sm text-text hover:bg-bg rounded-md flex items-center gap-2"
+            >
+              <Globe size={16} />
+              {t('language.switchLanguage')} ({language === 'en' ? 'EN' : 'TH'})
+            </button>
+            <button
               onClick={handleExportClick}
               className="w-full px-3 py-2 text-left text-sm text-text hover:bg-bg rounded-md flex items-center gap-2"
             >
               <Download size={16} />
-              Export Data
+              {t('actions.exportData')}
             </button>
             <button
               onClick={handleImportClick}
               className="w-full px-3 py-2 text-left text-sm text-text hover:bg-bg rounded-md flex items-center gap-2"
             >
               <Upload size={16} />
-              Import Data
+              {t('actions.importData')}
             </button>
             <button
               onClick={handleThemeToggle}
               className="w-full px-3 py-2 text-left text-sm text-text hover:bg-bg rounded-md flex items-center gap-2"
             >
               {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-              {theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              {theme === 'light' ? t('actions.switchToDarkMode') : t('actions.switchToLightMode')}
             </button>
           </div>
         </div>

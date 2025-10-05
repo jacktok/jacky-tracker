@@ -7,6 +7,7 @@ import { CategoryBreakdown } from './CategoryBreakdown';
 import { ToastContainer } from './ui/Toast';
 import { useExpenses } from '../hooks/useExpenses';
 import { useToast } from '../hooks/useToast';
+import { useTranslation } from '../hooks/useTranslation';
 import { 
   filterExpenses, 
   sortExpenses, 
@@ -16,6 +17,7 @@ import {
 import { ExpenseFormData } from '../types';
 
 export function Dashboard() {
+  const { t } = useTranslation();
   const {
     expenses,
     categories,
@@ -25,10 +27,11 @@ export function Dashboard() {
     deleteExpense,
     updateExpense,
     addCategory,
-    updateFilters
+    updateFilters,
+    syncWithApi
   } = useExpenses();
 
-  const { toasts, removeToast, showSuccess, showError } = useToast();
+  const { toasts, removeToast, showSuccess, showError, addToast } = useToast();
 
   // Calculate filtered and sorted expenses
   const filteredExpenses = sortExpenses(
@@ -45,29 +48,30 @@ export function Dashboard() {
   const handleAddExpense = useCallback(async (data: ExpenseFormData) => {
     try {
       await addExpense(data);
-      showSuccess('Expense added successfully');
+      // Show success toast for 4 seconds to ensure mobile users see it
+      addToast(`✅ ${t('messages.expenseAdded')}: ${data.category} - $${data.amount.toFixed(2)}`, 'success', 4000);
     } catch (error) {
-      showError('Failed to add expense');
+      showError(t('messages.expenseAddFailed'));
     }
-  }, [addExpense, showSuccess, showError]);
+  }, [addExpense, addToast, showError, t]);
 
   const handleDeleteExpense = useCallback(async (id: string) => {
     try {
       await deleteExpense(id);
-      showSuccess('Expense deleted');
+      showSuccess(t('messages.expenseDeleted'));
     } catch (error) {
-      showError('Failed to delete expense');
+      showError(t('messages.expenseDeleteFailed'));
     }
-  }, [deleteExpense, showSuccess, showError]);
+  }, [deleteExpense, showSuccess, showError, t]);
 
   const handleUpdateExpense = useCallback(async (id: string, data: Partial<ExpenseFormData>) => {
     try {
       await updateExpense(id, data as any);
-      showSuccess('Expense updated');
+      showSuccess(t('messages.expenseUpdated'));
     } catch (error) {
-      showError('Failed to update expense');
+      showError(t('messages.expenseUpdateFailed'));
     }
-  }, [updateExpense, showSuccess, showError]);
+  }, [updateExpense, showSuccess, showError, t]);
 
 
   if (isLoading) {
@@ -75,7 +79,7 @@ export function Dashboard() {
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-text-secondary">Loading...</p>
+          <p className="text-text-secondary">{t('app.loading')}</p>
         </div>
       </div>
     );
@@ -107,6 +111,7 @@ export function Dashboard() {
         categories={categories}
         onUpdateExpense={handleUpdateExpense}
         onDeleteExpense={handleDeleteExpense}
+        onReload={syncWithApi}
       />
       
       <CategoryBreakdown breakdown={categoryBreakdown} />

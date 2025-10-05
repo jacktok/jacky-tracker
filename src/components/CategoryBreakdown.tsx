@@ -1,6 +1,7 @@
 import React from 'react';
 import { CategoryBreakdown as CategoryBreakdownType } from '../types';
 import { formatCurrency } from '../utils';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface CategoryBreakdownProps {
   breakdown: CategoryBreakdownType;
@@ -9,15 +10,16 @@ interface CategoryBreakdownProps {
 export const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({
   breakdown
 }) => {
+  const { t } = useTranslation();
   const sortedCategories = Object.entries(breakdown)
     .sort(([, a], [, b]) => b - a);
 
   if (sortedCategories.length === 0) {
     return (
       <div className="panel">
-        <h2 className="panel-title">📊 Category Breakdown (filtered)</h2>
+        <h2 className="panel-title">📊 {t('categoryBreakdown.title')}</h2>
         <div className="empty">
-          No expenses to breakdown
+          {t('categoryBreakdown.emptyMessage')}
         </div>
       </div>
     );
@@ -25,7 +27,7 @@ export const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({
 
   return (
     <div className="panel">
-      <h2 className="panel-title">📊 Category Breakdown (filtered)</h2>
+      <h2 className="panel-title">📊 {t('categoryBreakdown.title')}</h2>
       
       <div className="breakdown">
         {sortedCategories.map(([category, amount]) => (

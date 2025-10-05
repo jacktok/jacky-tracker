@@ -6,6 +6,7 @@ import { useToast } from '../hooks/useToast';
 import { Expense } from '../types';
 import { api } from '../services/api';
 import { UserPromptManagement } from './UserPromptManagement';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface ChatMessage {
   id: string;
@@ -17,13 +18,9 @@ interface ChatMessage {
   isProcessing?: boolean;
 }
 
-interface CategorySuggestion {
-  category: string;
-  confidence: number;
-  description?: string;
-}
 
 export const ChatMode: React.FC = () => {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -60,45 +57,31 @@ export const ChatMode: React.FC = () => {
       setMessages([{
         id: '1',
         type: 'bot',
-        content: "Hi! Tell me about your expenses and I'll categorize them.",
+        content: t('chatMode.welcomeMessage'),
         timestamp: new Date()
       }]);
     }
-  }, []);
+  }, [t]);
 
-  const classifyExpense = async (message: string, amount: number, description: string): Promise<CategorySuggestion | null> => {
+
+  const extractExpenseData = async (message: string) => {
     try {
-      const response = await api.classifyExpense(message, amount, description);
+      // Get user's current date (client-side timezone)
+      const now = new Date();
+      const userDate = now.getFullYear() + '-' + 
+        String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(now.getDate()).padStart(2, '0');
+      const response = await api.extractExpense(message, userDate);
       
       if (response.success && response.data) {
-        if (response.data.category) {
-          return {
-            category: response.data.category,
-            confidence: response.data.confidence,
-            description: response.data.description
-          };
-        }
+        return response.data;
       }
       
       return null;
     } catch (error) {
-      console.error('Error classifying expense:', error);
+      console.error('Error extracting expense data:', error);
       return null;
     }
-  };
-
-  const extractExpenseData = (message: string): { amount: number; description: string } | null => {
-    // Simple regex to extract amount and description
-    const amountRegex = /\$?(\d+(?:\.\d{2})?)/;
-    const match = message.match(amountRegex);
-    
-    if (match) {
-      const amount = parseFloat(match[1]);
-      const description = message.replace(amountRegex, '').trim();
-      return { amount, description: description || 'Expense' };
-    }
-    
-    return null;
   };
 
   const handleSendMessage = async () => {
@@ -119,7 +102,7 @@ export const ChatMode: React.FC = () => {
     const processingMessage: ChatMessage = {
       id: (Date.now() + 1).toString(),
       type: 'bot',
-      content: 'Processing your expense...',
+      content: t('chatMode.processing'),
       timestamp: new Date(),
       isProcessing: true
     };
@@ -127,79 +110,70 @@ export const ChatMode: React.FC = () => {
     setMessages(prev => [...prev, processingMessage]);
 
     try {
-      // Extract expense data
-      const expenseData = extractExpenseData(inputValue);
+      // Extract expense data using LLM
+      const extractedData = await extractExpenseData(inputValue);
       
-      if (!expenseData) {
+      if (!extractedData) {
         setMessages(prev => prev.slice(0, -1).concat([{
           id: (Date.now() + 1).toString(),
           type: 'bot',
-          content: "I couldn't find an amount in your message. Please include a dollar amount, like 'I spent $25 on lunch'.",
+          content: t('chatMode.noAmountFound'),
           timestamp: new Date()
         }]));
         setIsProcessing(false);
         return;
       }
 
-      // Classify the expense
-      const suggestion = await classifyExpense(inputValue, expenseData.amount, expenseData.description);
-      
-      if (suggestion) {
-        // Check if category exists, if not, create it
-        let categoryName = suggestion.category;
-        if (!categories.includes(categoryName)) {
-          try {
-            await addCategory(categoryName);
-            showSuccess(`Created new category: ${categoryName}`);
-          } catch (error) {
-            console.error('Failed to create category:', error);
-          }
-        }
-
-        // Create the expense
-        const newExpense: Omit<Expense, 'id'> = {
-          date: new Date().toISOString().split('T')[0],
-          amount: expenseData.amount,
-          category: categoryName,
-          note: expenseData.description
-        };
-
+      // Check if category exists, if not, create it
+      let categoryName = extractedData.category;
+      if (extractedData.isNewCategory && !categories.includes(categoryName)) {
         try {
-          await addExpense(newExpense);
-          
-          setMessages(prev => prev.slice(0, -1).concat([{
-            id: (Date.now() + 1).toString(),
-            type: 'bot',
-            content: `✅ Expense added! I categorized "${expenseData.description}" ($${expenseData.amount}) as "${categoryName}". ${suggestion.description ? `(${suggestion.description})` : ''}`,
-            timestamp: new Date(),
-            expense: { ...newExpense, id: Date.now().toString() } as Expense
-          }]));
-          
-          showSuccess('Expense added successfully!');
+          await addCategory(categoryName);
+          showSuccess(t('chatMode.categoryCreated', { category: categoryName }));
         } catch (error) {
-          setMessages(prev => prev.slice(0, -1).concat([{
-            id: (Date.now() + 1).toString(),
-            type: 'bot',
-            content: "❌ Sorry, I couldn't add the expense. Please try again or use the regular form.",
-            timestamp: new Date()
-          }]));
-          showError('Failed to add expense');
+          console.error('Failed to create category:', error);
         }
-      } else {
+      }
+
+      // Create the expense
+      const newExpense: Omit<Expense, 'id'> = {
+        date: extractedData.date,
+        amount: extractedData.amount,
+        category: categoryName,
+        note: extractedData.note
+      };
+
+      try {
+        await addExpense(newExpense);
+        
         setMessages(prev => prev.slice(0, -1).concat([{
           id: (Date.now() + 1).toString(),
           type: 'bot',
-          content: `I found an expense: $${expenseData.amount} for "${expenseData.description}", but I'm not sure how to categorize it. Could you tell me what category this should be?`,
+          content: `✅ ${t('chatMode.expenseAdded', { 
+            description: extractedData.note, 
+            amount: extractedData.amount, 
+            category: categoryName 
+          })} (${extractedData.date})`,
           timestamp: new Date(),
-          suggestedCategory: 'New Category'
+          expense: { ...newExpense, id: Date.now().toString() } as Expense
         }]));
+        
+        showSuccess(t('messages.expenseAdded'));
+      } catch (error) {
+        setMessages(prev => prev.slice(0, -1).concat([{
+          id: (Date.now() + 1).toString(),
+          type: 'bot',
+          content: `❌ ${t('chatMode.expenseAddFailed')}`,
+          timestamp: new Date()
+        }]));
+        showError(t('messages.expenseAddFailed'));
       }
     } catch (error) {
       console.error('Error processing message:', error);
       setMessages(prev => prev.slice(0, -1).concat([{
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: "❌ Sorry, something went wrong. Please try again.",
+        content: `❌ ${t('chatMode.errorMessage')}`,
         timestamp: new Date()
       }]));
     } finally {
@@ -217,9 +191,9 @@ export const ChatMode: React.FC = () => {
   const handleCreateCategory = async (categoryName: string) => {
     try {
       await addCategory(categoryName);
-      showSuccess(`Created category: ${categoryName}`);
+      showSuccess(t('chatMode.categoryCreated', { category: categoryName }));
     } catch (error) {
-      showError('Failed to create category');
+      showError(t('messages.categoryAddFailed'));
     }
   };
 
@@ -233,16 +207,16 @@ export const ChatMode: React.FC = () => {
               <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-semibold text-text">Expense Assistant</h2>
-              <p className="text-xs sm:text-sm text-text-secondary hidden sm:block">Chat with me to add expenses naturally</p>
+              <h2 className="text-base sm:text-lg font-semibold text-text">{t('chatMode.title')}</h2>
+              <p className="text-xs sm:text-sm text-text-secondary hidden sm:block">{t('chatMode.subtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Current Prompt Display - Hidden on mobile */}
             <div className="text-xs sm:text-sm hidden sm:block">
-              <span className="text-text-secondary">Using: </span>
+              <span className="text-text-secondary">{t('chatMode.using')} </span>
               <span className="font-medium text-text">
-                {hasCustomPrompt ? 'Custom' : 'Default'}
+                {hasCustomPrompt ? t('chatMode.custom') : t('chatMode.default')}
               </span>
             </div>
             <Button
@@ -252,8 +226,8 @@ export const ChatMode: React.FC = () => {
               className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3"
             >
               <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">AI Prompts</span>
-              <span className="sm:hidden">Prompts</span>
+              <span className="hidden sm:inline">{t('chatMode.aiPrompts')}</span>
+              <span className="sm:hidden">{t('chatMode.prompts')}</span>
             </Button>
           </div>
         </div>
@@ -294,7 +268,7 @@ export const ChatMode: React.FC = () => {
                   {message.isProcessing && (
                     <div className="flex items-center gap-2 mt-2">
                       <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
-                      <span className="text-xs text-text-secondary">Processing...</span>
+                      <span className="text-xs text-text-secondary">{t('chatMode.processingLabel')}</span>
                     </div>
                   )}
                   {message.suggestedCategory && (
@@ -306,8 +280,8 @@ export const ChatMode: React.FC = () => {
                         className="text-xs px-2 py-1"
                       >
                         <Plus className="w-3 h-3 mr-1" />
-                        <span className="hidden sm:inline">Create "{message.suggestedCategory}"</span>
-                        <span className="sm:hidden">Create</span>
+                        <span className="hidden sm:inline">{t('chatMode.createCategory', { category: message.suggestedCategory })}</span>
+                        <span className="sm:hidden">{t('chatMode.create')}</span>
                       </Button>
                     </div>
                   )}
@@ -336,7 +310,7 @@ export const ChatMode: React.FC = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Tell me about your expense..."
+            placeholder={t('chatMode.placeholder')}
             disabled={isProcessing}
             className="flex-1 w-full px-3 py-3 text-sm font-medium bg-panel-2 border border-border text-text rounded-lg outline-none transition-colors duration-150 min-h-[48px] focus:border-accent focus:shadow-[0_0_0_4px_var(--ring)] focus:bg-panel focus:-translate-y-0.5 focus:transition-all focus:duration-150 hover:border-accent-light hover:bg-panel-2 placeholder:text-text-muted placeholder:opacity-70 disabled:opacity-50 disabled:cursor-not-allowed"
           />
@@ -354,8 +328,8 @@ export const ChatMode: React.FC = () => {
         </div>
         
         <div className="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-text-secondary">
-          <span className="hidden sm:inline">💡 Try: "Coffee $4.50", "Lunch $25 at McDonald's", "Gas $45", "Movie tickets $30"</span>
-          <span className="sm:hidden">💡 Try: "Coffee $4.50", "Lunch $25"</span>
+          <span className="hidden sm:inline">{t('chatMode.hint')}</span>
+          <span className="sm:hidden">{t('chatMode.hintMobile')}</span>
         </div>
       </div>
     </div>

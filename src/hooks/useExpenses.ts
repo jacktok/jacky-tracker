@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Expense, Filters, AppState } from '../types';
 import { ApiService } from '../services/api';
-import { STORAGE_KEY, defaultCategories } from '../utils';
+import { STORAGE_KEY, defaultCategories, getDateRangePresets } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
 
 export function useExpenses() {
   const { isAuthenticated } = useAuth();
+  // Get default date range for last 30 days
+  const defaultDateRange = getDateRangePresets().last30Days;
+  
   const [state, setState] = useState<AppState>({
     expenses: [],
     categories: [...defaultCategories],
     filters: {
-      from: '',
-      to: '',
+      from: defaultDateRange.from,
+      to: defaultDateRange.to,
       category: '',
       search: '',
       sort: 'date_desc'
@@ -28,13 +31,34 @@ export function useExpenses() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        setState(prevState => ({
-          ...prevState,
-          expenses: parsed.expenses || [],
-          categories: parsed.categories || [...defaultCategories],
-          filters: { ...prevState.filters, ...parsed.filters },
-          theme: parsed.theme || 'dark'
-        }));
+        
+        setState(prevState => {
+          // Check if saved filters have meaningful date values
+          let filtersToUse = prevState.filters; // This has the default 30-day filter
+          
+          if (parsed.filters) {
+            // If saved filters have date values, use them; otherwise keep default 30-day filter
+            if (parsed.filters.from || parsed.filters.to) {
+              filtersToUse = { ...prevState.filters, ...parsed.filters };
+            } else {
+              // Keep default 30-day filter but apply other filter settings
+              filtersToUse = { 
+                ...prevState.filters, 
+                category: parsed.filters.category || '',
+                search: parsed.filters.search || '',
+                sort: parsed.filters.sort || 'date_desc'
+              };
+            }
+          }
+          
+          return {
+            ...prevState,
+            expenses: parsed.expenses || [],
+            categories: parsed.categories || [...defaultCategories],
+            filters: filtersToUse,
+            theme: parsed.theme || 'dark'
+          };
+        });
       }
     } catch (error) {
       console.warn('Failed to load saved data:', error);

@@ -15,6 +15,7 @@ import {
   calculateCategoryBreakdown,
   formatCurrency 
 } from '../utils';
+import { useTranslation } from '../hooks/useTranslation';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -98,6 +99,7 @@ function SummaryCard({ title, value, change, changeType = 'neutral', icon, descr
 }
 
 export function Summary({ expenses }: SummaryProps) {
+  const { t } = useTranslation();
   const summaryData = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -235,33 +237,33 @@ export function Summary({ expenses }: SummaryProps) {
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <SummaryCard
-          title="This Month"
+          title={t('summary.thisMonth')}
           value={formatCurrency(summaryData.currentMonthTotal)}
           change={summaryData.monthOverMonthChange !== 0 ? formatChange(summaryData.monthOverMonthChange) : undefined}
           changeType={getChangeType(summaryData.monthOverMonthChange)}
           icon={<Calendar size={20} />}
-          description={`${summaryData.currentMonthCount} transactions`}
+          description={`${summaryData.currentMonthCount} ${t('summary.transactions')}`}
         />
         
         <SummaryCard
-          title="Last 30 Days"
+          title={t('summary.last30Days')}
           value={formatCurrency(summaryData.last30DaysTotal)}
           icon={<BarChart3 size={20} />}
-          description={`${summaryData.last30DaysCount} transactions`}
+          description={`${summaryData.last30DaysCount} ${t('summary.transactions')}`}
         />
         
         <SummaryCard
-          title="Last 7 Days"
+          title={t('summary.last7Days')}
           value={formatCurrency(summaryData.last7DaysTotal)}
           icon={<Calendar size={20} />}
-          description={`${summaryData.last7DaysCount} transactions`}
+          description={`${summaryData.last7DaysCount} ${t('summary.transactions')}`}
         />
         
         <SummaryCard
-          title="Total Spent"
+          title={t('summary.totalSpent')}
           value={formatCurrency(summaryData.totalSpent)}
           icon={<DollarSign size={20} />}
-          description={`${summaryData.totalExpenses} total transactions`}
+          description={`${summaryData.totalExpenses} ${t('summary.totalTransactions')}`}
         />
       </div>
 
@@ -269,15 +271,15 @@ export function Summary({ expenses }: SummaryProps) {
       <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
         <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4 flex items-center gap-2">
           <Target size={20} className="text-accent" />
-          Spending Insights
+          {t('summary.spendingInsights')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="flex items-center justify-between p-4 bg-bg rounded-lg">
             <div className="flex items-center gap-3">
               <TrendingUp size={20} className="text-green-500" />
               <div>
-                <div className="text-sm font-medium text-text">Average per transaction</div>
-                <div className="text-xs text-text-secondary">All time</div>
+                <div className="text-sm font-medium text-text">{t('summary.avgPerTransaction')}</div>
+                <div className="text-xs text-text-secondary">{t('summary.allTime')}</div>
               </div>
             </div>
             <span className="font-semibold text-text">{formatCurrency(summaryData.avgExpenseAmount)}</span>
@@ -287,8 +289,8 @@ export function Summary({ expenses }: SummaryProps) {
             <div className="flex items-center gap-3">
               <DollarSign size={20} className="text-blue-500" />
               <div>
-                <div className="text-sm font-medium text-text">Daily average</div>
-                <div className="text-xs text-text-secondary">This month</div>
+                <div className="text-sm font-medium text-text">{t('summary.dailyAverage')}</div>
+                <div className="text-xs text-text-secondary">{t('summary.thisMonth')}</div>
               </div>
             </div>
             <span className="font-semibold text-text">{formatCurrency(summaryData.avgDailySpending)}</span>
@@ -298,8 +300,8 @@ export function Summary({ expenses }: SummaryProps) {
             <div className="flex items-center gap-3">
               <AlertCircle size={20} className="text-red-500" />
               <div>
-                <div className="text-sm font-medium text-text">Largest expense</div>
-                <div className="text-xs text-text-secondary">All time</div>
+                <div className="text-sm font-medium text-text">{t('summary.largestExpense')}</div>
+                <div className="text-xs text-text-secondary">{t('summary.allTime')}</div>
               </div>
             </div>
             <span className="font-semibold text-text">{formatCurrency(summaryData.largestExpense)}</span>
@@ -309,8 +311,8 @@ export function Summary({ expenses }: SummaryProps) {
             <div className="flex items-center gap-3">
               <CheckCircle size={20} className="text-green-500" />
               <div>
-                <div className="text-sm font-medium text-text">Smallest expense</div>
-                <div className="text-xs text-text-secondary">All time</div>
+                <div className="text-sm font-medium text-text">{t('summary.smallestExpense')}</div>
+                <div className="text-xs text-text-secondary">{t('summary.allTime')}</div>
               </div>
             </div>
             <span className="font-semibold text-text">{formatCurrency(summaryData.smallestExpense)}</span>
@@ -324,7 +326,7 @@ export function Summary({ expenses }: SummaryProps) {
         <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
           <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4 flex items-center gap-2">
             <BarChart3 size={20} className="text-accent" />
-            Monthly Spending Trend
+            {t('summary.monthlyTrend')}
           </h3>
           <div className="h-64">
             <Line
@@ -332,7 +334,7 @@ export function Summary({ expenses }: SummaryProps) {
                 labels: summaryData.monthlyLabels,
                 datasets: [
                   {
-                    label: 'Monthly Spending',
+                    label: t('summary.monthlySpending'),
                     data: summaryData.monthlyData,
                     borderColor: 'rgb(59, 130, 246)',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -356,7 +358,7 @@ export function Summary({ expenses }: SummaryProps) {
                   tooltip: {
                     callbacks: {
                       label: function(context) {
-                        return `Spent: ${formatCurrency(context.parsed.y)}`;
+                        return `${t('summary.spent')}: ${formatCurrency(context.parsed.y)}`;
                       }
                     }
                   }
@@ -392,7 +394,7 @@ export function Summary({ expenses }: SummaryProps) {
         <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
           <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4 flex items-center gap-2">
             <BarChart3 size={20} className="text-accent" />
-            Weekly Spending
+            {t('summary.weeklySpending')}
           </h3>
           <div className="h-64">
             <Bar
@@ -400,7 +402,7 @@ export function Summary({ expenses }: SummaryProps) {
                 labels: summaryData.weeklyLabels,
                 datasets: [
                   {
-                    label: 'Weekly Spending',
+                    label: t('summary.weeklySpending'),
                     data: summaryData.weeklyData,
                     backgroundColor: 'rgba(59, 130, 246, 0.8)',
                     borderColor: 'rgb(59, 130, 246)',
@@ -419,7 +421,7 @@ export function Summary({ expenses }: SummaryProps) {
                   tooltip: {
                     callbacks: {
                       label: function(context) {
-                        return `Spent: ${formatCurrency(context.parsed.y)}`;
+                        return `${t('summary.spent')}: ${formatCurrency(context.parsed.y)}`;
                       }
                     }
                   }
@@ -456,7 +458,7 @@ export function Summary({ expenses }: SummaryProps) {
       <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
         <h3 className="text-lg font-semibold text-text mb-3 sm:mb-4 flex items-center gap-2">
           <PieChart size={20} className="text-accent" />
-          Category Distribution
+          {t('summary.categoryDistribution')}
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div className="h-64 flex items-center justify-center">

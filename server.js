@@ -52,17 +52,6 @@ async function addDefaultCategoriesForUser(userId) {
   console.log(`Added ${defaultCategories.length} default categories for new user ${userId}`);
 }
 
-// Helper function to add default prompt for new users
-async function addDefaultPromptForUser(userId) {
-  const defaultPrompt = 'You are an expert expense categorization assistant. Classify this expense into the most appropriate category based on the description and amount. Consider the context and choose from the available categories: {categoriesList}. Be specific and accurate in your classification. Respond with ONLY a JSON object in this exact format: {"field": "Category Name", "is_new": true/false}';
-  
-  await pool.query(
-    'INSERT INTO user_prompts (user_id, content) VALUES ($1, $2)',
-    [userId, defaultPrompt]
-  );
-  
-  console.log(`Added default prompt for new user ${userId}`);
-}
 
 // CORS configuration
 app.use(cors({
@@ -248,9 +237,8 @@ if (enableGoogleLogin) {
         
         await client.query('COMMIT');
         
-        // Add default categories and prompt for new user
+        // Add default categories for new user
         await addDefaultCategoriesForUser(userResult.rows[0].id);
-        await addDefaultPromptForUser(userResult.rows[0].id);
         
         return done(null, userResult.rows[0]);
       } catch (error) {
@@ -585,9 +573,8 @@ if (enableLineLogin) {
           
           await client.query('COMMIT');
           
-          // Add default categories and prompt for new user
+          // Add default categories for new user
           await addDefaultCategoriesForUser(userResult.rows[0].id);
-          await addDefaultPromptForUser(userResult.rows[0].id);
           
           user = userResult.rows[0];
         } catch (error) {
@@ -911,12 +898,13 @@ app.delete('/api/categories/:name', authenticateToken, async (req, res) => {
   }
 });
 
-// LLM-based category classification endpoint
-app.post('/api/classify-expense', authenticateToken, async (req, res) => {
-  const { message, amount, description, promptId } = req.body || {};
+
+// LLM-based expense extraction endpoint
+app.post('/api/extract-expense', authenticateToken, async (req, res) => {
+  const { message, userDate } = req.body || {};
   
-  if (!message || !amount) {
-    return res.status(400).json({ error: 'Message and amount are required' });
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
   }
   
   try {
@@ -937,13 +925,13 @@ app.post('/api/classify-expense', authenticateToken, async (req, res) => {
       customPrompt = promptResult.rows[0].content;
     }
     
-    // Use LLM service for classification
-    const result = await llmService.classifyExpense(message, amount, description, existingCategories, customPrompt);
+    // Use LLM service for extraction with user date
+    const result = await llmService.extractExpenseData(message, existingCategories, customPrompt, userDate);
     
     res.json(result);
   } catch (e) {
-    console.error('Classification error:', e);
-    res.status(500).json({ error: 'Failed to classify expense' });
+    console.error('Extraction error:', e);
+    res.status(500).json({ error: 'Failed to extract expense data' });
   }
 });
 
@@ -1057,9 +1045,8 @@ if (lineBotService) {
       
       const user = result.rows[0];
       
-      // Add default categories and prompt for new user
+      // Add default categories for new user
       await addDefaultCategoriesForUser(user.id);
-      await addDefaultPromptForUser(user.id);
       
       const token = jwt.sign(
         { userId: user.id, email: user.email },

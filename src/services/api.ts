@@ -137,21 +137,26 @@ export class ApiService {
     });
   }
 
-  // LLM classification endpoint
-  static async classifyExpense(message: string, amount: number, description?: string, promptId?: string): Promise<ApiResponse<{
-    category: string | null;
+
+  // LLM expense extraction endpoint
+  static async extractExpense(message: string, userDate?: string): Promise<ApiResponse<{
+    amount: number;
+    category: string;
+    note: string;
+    date: string;
+    isNewCategory: boolean;
     confidence: number;
-    description: string;
-    isExisting: boolean;
   }>> {
     return this.request<{
-      category: string | null;
+      amount: number;
+      category: string;
+      note: string;
+      date: string;
+      isNewCategory: boolean;
       confidence: number;
-      description: string;
-      isExisting: boolean;
-    }>('/api/classify-expense', {
+    }>('/api/extract-expense', {
       method: 'POST',
-      body: JSON.stringify({ message, amount, description, promptId }),
+      body: JSON.stringify({ message, userDate }),
     });
   }
 
