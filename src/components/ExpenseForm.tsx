@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Plus, X, Check } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -34,6 +34,16 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [errors, setErrors] = useState<string[]>([]);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Refs for scrolling
+  const categorySectionRef = useRef<HTMLDivElement>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if device is mobile
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+           window.innerWidth <= 768;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -50,10 +60,10 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
       await onAddExpense(formData);
       setIsSuccess(true);
       
-      // Reset form after successful submission
+      // Reset form after successful submission (preserve the original date)
       setTimeout(() => {
         setFormData({
-          date: new Date().toISOString().slice(0, 10),
+          date: formData.date, // Keep the same date that was just saved
           amount: 0,
           category: '',
           note: ''
@@ -89,6 +99,21 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
     setFormData(prev => ({ ...prev, date: date.toISOString().slice(0, 10) }));
   };
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newAmount = parseFloat(e.target.value) || 0;
+    setFormData(prev => ({ ...prev, amount: newAmount }));
+    
+    // Auto-scroll to category section on mobile when amount is entered
+    if (isMobile() && newAmount > 0 && categorySectionRef.current) {
+      setTimeout(() => {
+        categorySectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 300); // Small delay to ensure the input is focused
+    }
+  };
+
   return (
     <div className="panel">
       <h2 className="panel-title">➕ {t('expenseForm.title')}</h2>
@@ -116,13 +141,15 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 required
               />
               <Input
+                ref={amountInputRef}
                 label={t('expenseForm.amount')}
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 min="0"
                 placeholder="0.00"
                 value={formData.amount || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                onChange={handleAmountChange}
                 required
               />
             </div>
@@ -132,7 +159,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
             </div>
           </div>
 
-          <div className="form-section">
+          <div ref={categorySectionRef} className="form-section">
             <h3 className="form-section__title">🏷️ {t('expenseForm.category')} & {t('expenseForm.note')}</h3>
             <div className="space-y-4">
               <div>
@@ -222,7 +249,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
             variant="secondary"
             onClick={() => {
               setFormData({
-                date: new Date().toISOString().slice(0, 10),
+                date: formData.date, // Keep the current date when resetting
                 amount: 0,
                 category: '',
                 note: ''
